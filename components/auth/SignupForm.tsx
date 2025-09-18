@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 type Props = {
   onSuccess?: () => void;
@@ -15,12 +16,14 @@ export default function SignupForm({ onSuccess }: Props) {
     schoolRegNo: '',
     phone: '',
     fullName: '',
+    personId: '',
     email: '',
     password: '',
     confirmPassword: '',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [entityType, setEntityType] = useState<'school' | 'person'>('school');
 
   const update = (key: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -31,6 +34,17 @@ export default function SignupForm({ onSuccess }: Props) {
     setIsLoading(true);
     setError(null);
     try {
+      // Required fields based on entity type
+      if (entityType === 'school') {
+        if (!form.schoolName || !form.schoolRegNo) {
+          throw new Error('Please provide school name and registration number.');
+        }
+      } else {
+        if (!form.fullName || !form.personId) {
+          throw new Error('Please provide your full name and ID number.');
+        }
+      }
+
       // Frontend validation gate
       const minLength = form.password.length >= 8;
       const hasUpper = /[A-Z]/.test(form.password);
@@ -42,6 +56,17 @@ export default function SignupForm({ onSuccess }: Props) {
       if (!(minLength && hasUpper && hasLower && hasNumber && hasSpecial && passwordsMatch)) {
         throw new Error('Please meet all password requirements and ensure passwords match.');
       }
+
+      // Map UI to DB fields
+      const payload = {
+        name: entityType === 'school' ? form.schoolName : form.fullName,
+        registrationNumber: entityType === 'school' ? form.schoolRegNo : form.personId,
+        phone: form.phone,
+        email: form.email,
+      };
+
+      // For demo: log payload mapping
+      console.log('Signup payload to save:', payload);
 
       // Placeholder signup: mark as authenticated
       localStorage.setItem('isAuthenticated', 'true');
@@ -56,25 +81,67 @@ export default function SignupForm({ onSuccess }: Props) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="schoolName">School name</Label>
-        <Input
-          id="schoolName"
-          placeholder="Springfield High School"
-          value={form.schoolName}
-          onChange={update('schoolName')}
-          required
-        />
+        <Label>Registering as</Label>
+        <RadioGroup value={entityType} onValueChange={(v) => setEntityType(v as 'school' | 'person')} className="grid grid-cols-2 gap-3">
+          <div className="flex items-center space-x-2 rounded-md border bg-white p-3">
+            <RadioGroupItem value="school" id="acct-school" />
+            <Label htmlFor="acct-school" className="cursor-pointer">School / Institution</Label>
+          </div>
+          <div className="flex items-center space-x-2 rounded-md border bg-white p-3">
+            <RadioGroupItem value="person" id="acct-person" />
+            <Label htmlFor="acct-person" className="cursor-pointer">Person</Label>
+          </div>
+        </RadioGroup>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="schoolRegNo">School registration number</Label>
-        <Input
-          id="schoolRegNo"
-          placeholder="e.g., SCH-REG-2025-1234"
-          value={form.schoolRegNo}
-          onChange={update('schoolRegNo')}
-          required
-        />
-      </div>
+
+      {entityType === 'school' ? (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="schoolName">School / Institution name</Label>
+            <Input
+              id="schoolName"
+              placeholder="Springfield High School"
+              value={form.schoolName}
+              onChange={update('schoolName')}
+              required={entityType === 'school'}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="schoolRegNo">School registration number</Label>
+            <Input
+              id="schoolRegNo"
+              placeholder="e.g., SCH-REG-2025-1234"
+              value={form.schoolRegNo}
+              onChange={update('schoolRegNo')}
+              required={entityType === 'school'}
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="fullName">Full name</Label>
+            <Input
+              id="fullName"
+              placeholder="Jane Doe"
+              value={form.fullName}
+              onChange={update('fullName')}
+              required={entityType === 'person'}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="personId">ID number</Label>
+            <Input
+              id="personId"
+              placeholder="e.g., ID-1234-5678"
+              value={form.personId}
+              onChange={update('personId')}
+              required={entityType === 'person'}
+            />
+          </div>
+        </>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="phone">Phone number</Label>
         <Input
@@ -83,16 +150,6 @@ export default function SignupForm({ onSuccess }: Props) {
           placeholder="e.g., +1 555 123 4567"
           value={form.phone}
           onChange={update('phone')}
-          required
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="fullName">Full name</Label>
-        <Input
-          id="fullName"
-          placeholder="Jane Doe"
-          value={form.fullName}
-          onChange={update('fullName')}
           required
         />
       </div>
