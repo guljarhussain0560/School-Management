@@ -4,16 +4,23 @@ import { GraduationCap, DollarSign, Settings, Menu } from 'lucide-react';
 interface DashboardTabsProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  availableTabs?: string[];
 }
 
 
-const DashboardTabs = ({ activeTab, onTabChange }: DashboardTabsProps) => {
+const DashboardTabs = ({ activeTab, onTabChange, availableTabs }: DashboardTabsProps) => {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const tabs = [
+  
+  const allTabs = [
     { id: 'academic', label: 'Academic', icon: GraduationCap },
     { id: 'financial', label: 'Financial', icon: DollarSign },
     { id: 'operations', label: 'Operations', icon: Settings },
   ];
+
+  // Filter tabs based on availableTabs prop
+  const tabs = availableTabs 
+    ? allTabs.filter(tab => availableTabs.includes(tab.id))
+    : allTabs;
 
   return (
     <>

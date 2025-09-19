@@ -1,0 +1,549 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          UserRole  @default(ADMIN)
+  isActive      Boolean   @default(true)
+  phone         String?
+  address       String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdBy     String?
+  
+  // Relations
+  accounts      Account[]
+  sessions      Session[]
+  school        School?   @relation("SchoolUsers", fields: [schoolId], references: [id])
+  schoolId      String?
+  
+  // Created users (for admin)
+  createdUsers  User[]    @relation("UserCreatedBy")
+  creator       User?     @relation("UserCreatedBy", fields: [createdBy], references: [id])
+  
+  // Teacher assignments
+  teacherAssignments TeacherAssignment[]
+  
+  // Academic data
+  markedAttendance Attendance[]
+  createdAssignments Assignment[]
+  
+  // Employee management
+  createdEmployees Employee[]
+  createdStudents   Student[]
+  createdPerformances StudentPerformance[]
+  updatedCurriculum CurriculumProgress[]
+  
+  // Financial data
+  collectedFees     FeeCollection[]
+  payrollRecords    Payroll[]
+  budgetExpenses    BudgetExpense[]
+  
+  // Operations data
+  managedRoutes     BusRoute[]
+  reportedMaintenance MaintenanceLog[]
+  createdAlerts     SafetyAlert[]
+  
+  // School admin relation
+  adminSchool       School?   @relation("SchoolAdmin")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model School {
+  id                 String   @id @default(cuid())
+  name               String
+  registrationNumber String   @unique
+  address            String?
+  phone              String?
+  email              String?
+  adminId            String   @unique
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  
+  // Relations
+  admin              User     @relation("SchoolAdmin", fields: [adminId], references: [id])
+  users              User[]   @relation("SchoolUsers")
+  students           Student[]
+  busRoutes          BusRoute[]
+  maintenanceItems   MaintenanceItem[]
+  maintenanceLogs    MaintenanceLog[]
+  safetyAlerts       SafetyAlert[]
+  feeCollections     FeeCollection[]
+  assignments        Assignment[]
+  employees          Employee[]
+  payrolls           Payroll[]
+  attendanceRecords  Attendance[]
+  teacherAssignments TeacherAssignment[]
+  studentPerformances StudentPerformance[]
+  curriculumProgress CurriculumProgress[]
+}
+
+model Student {
+  id           String   @id @default(cuid())
+  name         String
+  email        String?
+  age          Int
+  grade        String
+  rollNumber   String
+  parentContact String?
+  address      String?
+  idProofUrl   String?
+  busRouteId   String?
+  schoolId     String
+  createdBy    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Personal Information
+  dateOfBirth  DateTime?
+  gender       String?
+  bloodGroup   String?
+  nationality  String?
+  religion     String?
+  
+  // Contact Information
+  studentPhone String?
+  parentName   String?
+  parentEmail  String?
+  parentPhone  String?
+  parentOccupation String?
+  emergencyContact  String?
+  emergencyPhone    String?
+  
+  // Address Information
+  permanentAddress   String?
+  temporaryAddress   String?
+  city               String?
+  state              String?
+  pincode            String?
+  
+  // Academic Information
+  previousSchool     String?
+  previousGrade      String?
+  admissionDate      DateTime?
+  admissionNumber    String?
+  academicYear       String?
+  
+  // Medical Information
+  medicalConditions  String?
+  allergies          String?
+  medications        String?
+  doctorName         String?
+  doctorPhone        String?
+  
+  // Transport Information
+  transportRequired  Boolean @default(false)
+  pickupAddress      String?
+  dropAddress        String?
+  
+  // Documents (JSON field to store multiple documents)
+  documents          Json?
+  
+  // Admission Status
+  status             AdmissionStatus @default(PENDING)
+  
+  // Relations
+  school       School       @relation(fields: [schoolId], references: [id])
+  creator      User         @relation(fields: [createdBy], references: [id])
+  busRoute     BusRoute?    @relation(fields: [busRouteId], references: [id])
+  attendance   Attendance[]
+  feePayments  FeeCollection[]
+  assignments  StudentAssignment[]
+  performances StudentPerformance[]
+}
+
+model TeacherAssignment {
+  id        String   @id @default(cuid())
+  teacherId String
+  subject   String
+  grade     String
+  schoolId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  teacher   User   @relation(fields: [teacherId], references: [id])
+  school    School @relation(fields: [schoolId], references: [id])
+  
+  @@unique([teacherId, subject, grade, schoolId])
+}
+
+model StudentPerformance {
+  id          String   @id @default(cuid())
+  studentId   String
+  subject     String
+  grade       String
+  marks       Float
+  maxMarks    Float
+  examType    String?  // "Quiz", "Test", "Exam", "Assignment"
+  examDate    DateTime?
+  remarks     String?
+  schoolId    String
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  student     Student @relation(fields: [studentId], references: [id])
+  school      School  @relation(fields: [schoolId], references: [id])
+  creator     User    @relation(fields: [createdBy], references: [id])
+}
+
+model CurriculumProgress {
+  id          String   @id @default(cuid())
+  subject     String
+  grade       String
+  module      String
+  progress    Float    // Percentage 0-100
+  schoolId    String
+  updatedBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  school      School @relation(fields: [schoolId], references: [id])
+  updater     User   @relation(fields: [updatedBy], references: [id])
+  
+  @@unique([subject, grade, module, schoolId])
+}
+
+model Attendance {
+  id        String   @id @default(cuid())
+  studentId String
+  date      DateTime
+  isPresent Boolean  @default(true)
+  markedBy  String
+  createdAt DateTime @default(now())
+  
+  // Relations
+  student   Student @relation(fields: [studentId], references: [id])
+  marker    User    @relation(fields: [markedBy], references: [id])
+  school    School  @relation(fields: [schoolId], references: [id])
+  schoolId  String
+  
+  @@unique([studentId, date])
+}
+
+model Assignment {
+  id          String           @id @default(cuid())
+  title       String
+  subject     String
+  grade       String
+  dueDate     DateTime
+  status      AssignmentStatus @default(PENDING)
+  description String?
+  schoolId    String
+  createdBy   String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  
+  // Relations
+  school      School             @relation(fields: [schoolId], references: [id])
+  creator     User               @relation(fields: [createdBy], references: [id])
+  students    StudentAssignment[]
+}
+
+model StudentAssignment {
+  id           String   @id @default(cuid())
+  studentId    String
+  assignmentId String
+  marks        Int?
+  comment      String?
+  status       AssignmentStatus @default(PENDING)
+  submittedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  student      Student    @relation(fields: [studentId], references: [id])
+  assignment   Assignment @relation(fields: [assignmentId], references: [id])
+  
+  @@unique([studentId, assignmentId])
+}
+
+model FeeCollection {
+  id          String        @id @default(cuid())
+  studentId   String
+  amount      Decimal       @db.Decimal(10, 2)
+  paymentMode PaymentMode
+  collectedBy String
+  date        DateTime      @default(now())
+  receiptUrl  String?
+  notes       String?
+  
+  // Relations
+  student     Student @relation(fields: [studentId], references: [id])
+  collector   User    @relation(fields: [collectedBy], references: [id])
+  school      School  @relation(fields: [schoolId], references: [id])
+  schoolId    String
+}
+
+model Payroll {
+  id            String   @id @default(cuid())
+  employeeId    String?
+  employeeName  String?
+  department    String
+  position      String?
+  basicSalary   Decimal? @db.Decimal(10, 2)
+  allowances    Decimal? @db.Decimal(10, 2)
+  deductions    Decimal? @db.Decimal(10, 2)
+  amount        Decimal  @db.Decimal(10, 2)
+  month         Int
+  year          Int
+  status        PayrollStatus @default(PENDING)
+  uploadedBy    String
+  fileUrl       String?
+  schoolId      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  employee      Employee? @relation(fields: [employeeId], references: [id])
+  uploader      User @relation(fields: [uploadedBy], references: [id])
+  school        School? @relation(fields: [schoolId], references: [id])
+}
+
+model BudgetExpense {
+  id          String   @id @default(cuid())
+  department  String
+  amount      Decimal  @db.Decimal(10, 2)
+  status      BudgetStatus @default(PENDING)
+  description String?
+  receiptUrl  String?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  creator     User @relation(fields: [createdBy], references: [id])
+}
+
+model BusRoute {
+  id           String      @id @default(cuid())
+  routeName    String
+  busNumber    String
+  status       RouteStatus @default(ON_TIME)
+  delayReason  String?
+  delayMinutes Int?
+  lastUpdated  DateTime?
+  managedBy    String
+  schoolId     String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  // Relations
+  manager      User      @relation(fields: [managedBy], references: [id])
+  school       School    @relation(fields: [schoolId], references: [id])
+  students     Student[]
+}
+
+model MaintenanceItem {
+  id          String            @id @default(cuid())
+  name        String
+  description String?
+  status      MaintenanceStatus @default(OK)
+  notes       String?
+  photoUrl    String?
+  lastChecked DateTime          @default(now())
+  schoolId    String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  
+  // Relations
+  school      School  @relation(fields: [schoolId], references: [id])
+}
+
+model MaintenanceLog {
+  id          String            @id @default(cuid())
+  facility    String
+  status      MaintenanceStatus @default(OK)
+  notes       String?
+  proofUrl    String?
+  reportedBy  String
+  schoolId    String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  
+  // Relations
+  reporter    User    @relation(fields: [reportedBy], references: [id])
+  school      School  @relation(fields: [schoolId], references: [id])
+}
+
+model SafetyAlert {
+  id          String        @id @default(cuid())
+  type        AlertType
+  priority    AlertPriority @default(MEDIUM)
+  description String
+  details     String?
+  status      AlertStatus   @default(ACTIVE)
+  syncedAt    DateTime?
+  createdBy   String
+  schoolId    String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  // Relations
+  creator     User    @relation(fields: [createdBy], references: [id])
+  school      School  @relation(fields: [schoolId], references: [id])
+}
+
+model Employee {
+  id              String        @id @default(cuid())
+  employeeId      String        @unique
+  name            String
+  email           String        @unique
+  phone           String?
+  address         String?
+  dateOfBirth     DateTime?
+  dateOfJoining   DateTime      @default(now())
+  department      String
+  position        String
+  salary          Float
+  status          EmployeeStatus @default(ACTIVE)
+  emergencyContact String?
+  emergencyPhone  String?
+  qualifications  String?
+  experience      String?
+  bankAccount     String?
+  ifscCode        String?
+  panNumber       String?
+  aadharNumber    String?
+  profileImage    String?
+  documents       String?       // JSON string for document URLs
+  notes           String?
+  createdBy       String
+  schoolId        String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Relations
+  creator         User          @relation(fields: [createdBy], references: [id])
+  school          School        @relation(fields: [schoolId], references: [id])
+  payrolls        Payroll[]
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  TEACHER
+  TRANSPORT
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  TERMINATED
+  ON_LEAVE
+}
+
+enum AdmissionStatus {
+  PENDING
+  UNDER_REVIEW
+  ACCEPTED
+  REJECTED
+}
+
+enum AssignmentStatus {
+  PENDING
+  COMPLETED
+  OVERDUE
+}
+
+enum PaymentMode {
+  CASH
+  UPI
+  BANK_TRANSFER
+}
+
+enum PayrollStatus {
+  PENDING
+  APPROVED
+  PAID
+}
+
+enum BudgetStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum RouteStatus {
+  ON_TIME
+  DELAYED
+  CANCELLED
+}
+
+enum MaintenanceStatus {
+  OK
+  NEEDS_REPAIR
+  IN_PROGRESS
+}
+
+enum AlertType {
+  FIRE_DRILL
+  ACCIDENT
+  DELAY
+  MAINTENANCE
+  OTHER
+}
+
+enum AlertPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AlertStatus {
+  ACTIVE
+  RESOLVED
+  SYNCED
+}

@@ -1,15 +1,8 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import LoginForm from '@/components/auth/LoginForm';
 
 export default function LoginPage() {
-  const router = useRouter();
-
-  const handleAuthSuccess = () => {
-    router.replace('/home');
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="w-full max-w-md">
@@ -18,7 +11,7 @@ export default function LoginPage() {
           <p className="text-sm text-muted-foreground mt-1">Login to your School Management Portal</p>
         </div>
         <div className="rounded-lg border bg-white p-6 shadow-sm">
-          <LoginForm onSuccess={handleAuthSuccess} />
+          <LoginForm />
         </div>
         <div className="mt-3 text-center text-sm">
           New here? <a href="/signup" className="underline">Create an account</a>

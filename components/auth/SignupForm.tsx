@@ -60,17 +60,33 @@ export default function SignupForm({ onSuccess }: Props) {
       // Map UI to DB fields
       const payload = {
         name: entityType === 'school' ? form.schoolName : form.fullName,
-        registrationNumber: entityType === 'school' ? form.schoolRegNo : form.personId,
-        phone: form.phone,
         email: form.email,
+        password: form.password,
+        schoolName: entityType === 'school' ? form.schoolName : undefined,
+        schoolRegNo: entityType === 'school' ? form.schoolRegNo : undefined,
+        phone: form.phone,
+        entityType: entityType
       };
 
-      // For demo: log payload mapping
-      console.log('Signup payload to save:', payload);
+      // Call the registration API
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
 
-      // Placeholder signup: mark as authenticated
-      localStorage.setItem('isAuthenticated', 'true');
-      onSuccess?.();
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Registration failed');
+      }
+
+      const result = await response.json();
+      console.log('Registration successful:', result);
+
+      // Redirect to login page after successful registration
+      window.location.href = '/login?message=Registration successful. Please log in.';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to sign up. Please try again.');
     } finally {
