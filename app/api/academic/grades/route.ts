@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     // Get unique grades from students
     const grades = await prisma.student.findMany({
       where: { 
-        schoolId: session.user.schoolId,
+        schoolId: session.user.schoolId!,
         status: 'ACCEPTED' // Only get grades from accepted students
       },
       select: { grade: true },
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
     // Also get unique grades from performance records
     const performanceGrades = await prisma.studentPerformance.findMany({
-      where: { schoolId: session.user.schoolId },
+      where: { schoolId: session.user.schoolId! },
       select: { grade: true },
       distinct: ['grade'],
       orderBy: { grade: 'asc' }

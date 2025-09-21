@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     const students = await prisma.student.findMany({
       where: {
         grade: grade,
-        schoolId: session.user.schoolId,
+        schoolId: session.user.schoolId!,
         status: 'ACCEPTED' // Only get accepted students
       },
       select: {

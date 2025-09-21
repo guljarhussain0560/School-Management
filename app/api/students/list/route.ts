@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     // Get students for the current school
     const students = await prisma.student.findMany({
       where: {
-        schoolId: session.user.schoolId
+        schoolId: session.user.schoolId!
       },
       select: {
         id: true,

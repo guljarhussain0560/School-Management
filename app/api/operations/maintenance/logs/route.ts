@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     // Build where clause
     const where: any = {
-      schoolId: session.user.schoolId
+      schoolId: session.user.schoolId!
     }
 
     if (status && status !== 'all') {
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
         notes: notes || null,
         proofUrl: proofUrl || null,
         reportedBy: session.user.id,
-        schoolId: session.user.schoolId
+        schoolId: session.user.schoolId!
       },
       include: {
         reporter: {

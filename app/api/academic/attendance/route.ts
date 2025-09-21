@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       const existingAttendance = await prisma.attendance.findFirst({
         where: {
           date: new Date(date),
-          schoolId: session.user.schoolId
+          schoolId: session.user.schoolId!!
         }
       })
 
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
         )
       }
     } catch (checkError) {
-      console.log('Could not check existing attendance, proceeding with creation:', checkError.message)
+      console.log('Could not check existing attendance, proceeding with creation:', checkError instanceof Error ? checkError.message : 'Unknown error')
     }
 
     // Validate student IDs exist
@@ -51,13 +51,13 @@ export async function POST(request: NextRequest) {
     const existingStudents = await prisma.student.findMany({
       where: {
         id: { in: studentIds },
-        schoolId: session.user.schoolId
+        schoolId: session.user.schoolId!
       },
       select: { id: true }
     })
 
     const existingStudentIds = existingStudents.map(s => s.id)
-    const invalidStudentIds = studentIds.filter(id => !existingStudentIds.includes(id))
+    const invalidStudentIds = studentIds.filter((id: string) => !existingStudentIds.includes(id))
     
     if (invalidStudentIds.length > 0) {
       return NextResponse.json(
@@ -109,12 +109,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error recording attendance:', error)
     console.error('Error details:', {
-      message: error.message,
-      code: error.code,
-      meta: error.meta
+      message: error instanceof Error ? error.message : 'Unknown error',
+      code: (error as any).code,
+      meta: (error as any).meta
     })
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const itemsSummary = await prisma.maintenanceItem.groupBy({
       by: ['status'],
       where: {
-        schoolId: session.user.schoolId
+        schoolId: session.user.schoolId!
       },
       _count: {
         status: true
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     const logsSummary = await prisma.maintenanceLog.groupBy({
       by: ['status'],
       where: {
-        schoolId: session.user.schoolId
+        schoolId: session.user.schoolId!
       },
       _count: {
         status: true
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     const recentLogs = await prisma.maintenanceLog.count({
       where: {
-        schoolId: session.user.schoolId,
+        schoolId: session.user.schoolId!,
         createdAt: {
           gte: sevenDaysAgo
         }
@@ -52,20 +52,20 @@ export async function GET(request: NextRequest) {
     // Get total counts
     const totalItems = await prisma.maintenanceItem.count({
       where: {
-        schoolId: session.user.schoolId
+        schoolId: session.user.schoolId!
       }
     })
 
     const totalLogs = await prisma.maintenanceLog.count({
       where: {
-        schoolId: session.user.schoolId
+        schoolId: session.user.schoolId!
       }
     })
 
     // Get items needing attention
     const itemsNeedingAttention = await prisma.maintenanceItem.count({
       where: {
-        schoolId: session.user.schoolId,
+        schoolId: session.user.schoolId!,
         status: {
           in: ['NEEDS_REPAIR', 'IN_PROGRESS']
         }
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     // Get logs needing attention
     const logsNeedingAttention = await prisma.maintenanceLog.count({
       where: {
-        schoolId: session.user.schoolId,
+        schoolId: session.user.schoolId!,
         status: {
           in: ['NEEDS_REPAIR', 'IN_PROGRESS']
         }
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
     const facilityBreakdown = await prisma.maintenanceLog.groupBy({
       by: ['facility'],
       where: {
-        schoolId: session.user.schoolId
+        schoolId: session.user.schoolId!
       },
       _count: {
         facility: true

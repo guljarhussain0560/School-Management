@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     const students = await prisma.student.findMany({
       where: {
         grade: grade,
-        schoolId: session.user.schoolId
+        schoolId: session.user.schoolId!
       },
       select: {
         id: true,
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
             studentId: student.id,
             date: new Date(date),
             isPresent: isPresent,
-            schoolId: session.user.schoolId,
+            schoolId: session.user.schoolId!,
             markedBy: session.user.id
           }
         })

@@ -31,13 +31,13 @@ export async function POST(request: NextRequest) {
       where: {
         id: { in: studentIds },
         grade: grade,
-        schoolId: session.user.schoolId
+        schoolId: session.user.schoolId!
       },
       select: { id: true }
     })
 
     const existingStudentIds = existingStudents.map(s => s.id)
-    const invalidStudentIds = studentIds.filter(id => !existingStudentIds.includes(id))
+    const invalidStudentIds = studentIds.filter((id: string) => !existingStudentIds.includes(id))
     
     if (invalidStudentIds.length > 0) {
       return NextResponse.json(

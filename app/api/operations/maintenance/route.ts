@@ -35,7 +35,8 @@ export async function POST(request: NextRequest) {
         name,
         description: description || null,
         status,
-        lastChecked: new Date()
+        lastChecked: new Date(),
+        schoolId: 'temp-school-id' // This will be replaced with proper schoolId
       }
     });
 
@@ -79,7 +80,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const updatedItem = await prisma.maintenanceItem.update({
-      where: { id: parseInt(itemId) },
+      where: { id: itemId },
       data: updateData
     });
 

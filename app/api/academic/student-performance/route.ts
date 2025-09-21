@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
 
     // Get unique subjects for dropdown
     const subjects = await prisma.studentPerformance.findMany({
-      where: { schoolId: session.user.schoolId },
+      where: { schoolId: session.user.schoolId! },
       select: { subject: true },
       distinct: ['subject'],
       orderBy: { subject: 'asc' }

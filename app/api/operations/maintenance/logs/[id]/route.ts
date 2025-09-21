@@ -20,7 +20,7 @@ export async function GET(
     const log = await prisma.maintenanceLog.findFirst({
       where: {
         id: params.id,
-        schoolId: session.user.schoolId
+        schoolId: session.user.schoolId!
       },
       include: {
         reporter: {
@@ -72,7 +72,7 @@ export async function PUT(
     const existingLog = await prisma.maintenanceLog.findFirst({
       where: {
         id: params.id,
-        schoolId: session.user.schoolId
+        schoolId: session.user.schoolId!
       }
     })
 
@@ -135,7 +135,7 @@ export async function DELETE(
     const existingLog = await prisma.maintenanceLog.findFirst({
       where: {
         id: params.id,
-        schoolId: session.user.schoolId
+        schoolId: session.user.schoolId!
       }
     })
 

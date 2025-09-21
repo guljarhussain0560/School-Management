@@ -20,7 +20,7 @@ export async function GET(
     const item = await prisma.maintenanceItem.findFirst({
       where: {
         id: params.id,
-        schoolId: session.user.schoolId
+        schoolId: session.user.schoolId!
       }
     })
 
@@ -63,7 +63,7 @@ export async function PUT(
     const existingItem = await prisma.maintenanceItem.findFirst({
       where: {
         id: params.id,
-        schoolId: session.user.schoolId
+        schoolId: session.user.schoolId!
       }
     })
 
@@ -119,7 +119,7 @@ export async function DELETE(
     const existingItem = await prisma.maintenanceItem.findFirst({
       where: {
         id: params.id,
-        schoolId: session.user.schoolId
+        schoolId: session.user.schoolId!
       }
     })
 
