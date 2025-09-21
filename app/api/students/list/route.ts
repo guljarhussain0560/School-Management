@@ -21,8 +21,10 @@ export async function GET(request: NextRequest) {
       },
       select: {
         id: true,
+        studentId: true,
         name: true,
         grade: true,
+        rollNumber: true,
         admissionNumber: true
       },
       orderBy: {

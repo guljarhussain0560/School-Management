@@ -31,24 +31,30 @@ export default withAuth(
       return NextResponse.redirect(new URL('/unauthorized', req.url))
     }
 
-    // Teacher-only routes
-    const teacherRoutes = [
+    // Teacher and Admin routes
+    const teacherAdminRoutes = [
       '/api/academic/attendance',
-      '/api/academic/assignments'
+      '/api/academic/assignments',
+      '/api/academic/students',
+      '/api/academic/student-performance',
+      '/api/academic/recent-admissions',
+      '/api/academic/subjects',
+      '/api/academic/curriculum-progress',
+      '/api/academic/teacher-assignments'
     ]
     
-    if (teacherRoutes.some(route => pathname.startsWith(route)) && userRole !== 'TEACHER') {
+    if (teacherAdminRoutes.some(route => pathname.startsWith(route)) && !['TEACHER', 'ADMIN'].includes(userRole)) {
       return NextResponse.redirect(new URL('/unauthorized', req.url))
     }
 
-    // Transport-only routes
+    // Transport routes (accessible by TRANSPORT and ADMIN)
     const transportRoutes = [
       '/api/operations/bus-routes',
       '/api/operations/maintenance',
       '/api/operations/safety-alerts'
     ]
     
-    if (transportRoutes.some(route => pathname.startsWith(route)) && userRole !== 'TRANSPORT') {
+    if (transportRoutes.some(route => pathname.startsWith(route)) && !['TRANSPORT', 'ADMIN'].includes(userRole)) {
       return NextResponse.redirect(new URL('/unauthorized', req.url))
     }
 

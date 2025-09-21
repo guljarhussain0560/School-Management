@@ -32,7 +32,13 @@ export async function GET(request: NextRequest) {
     // Add search filter
     if (search) {
       if (field === 'studentId') {
-        where.studentId = { contains: search, mode: 'insensitive' }
+        where.student = {
+          OR: [
+            { studentId: { contains: search, mode: 'insensitive' } },
+            { rollNumber: { contains: search, mode: 'insensitive' } },
+            { admissionNumber: { contains: search, mode: 'insensitive' } }
+          ]
+        }
       } else if (field === 'admissionNumber') {
         where.student = {
           admissionNumber: { contains: search, mode: 'insensitive' }
@@ -63,8 +69,11 @@ export async function GET(request: NextRequest) {
         student: {
           select: {
             id: true,
+            studentId: true,
             name: true,
-            grade: true
+            grade: true,
+            rollNumber: true,
+            admissionNumber: true
           }
         },
         collector: {
@@ -156,11 +165,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if student belongs to same school (search by both id and admissionNumber)
+    // Check if student belongs to same school (search by studentId, id, rollNumber, and admissionNumber)
     const student = await prisma.student.findFirst({
       where: {
         OR: [
+          { studentId: studentId },
           { id: studentId },
+          { rollNumber: studentId },
           { admissionNumber: studentId }
         ],
         schoolId: session.user.schoolId!
@@ -194,7 +205,7 @@ export async function POST(request: NextRequest) {
     const receiptData = {
       receiptNumber,
       studentName: student.name,
-      studentId: student.id,
+      studentId: student.studentId,
       admissionNumber: student.admissionNumber,
       grade: student.grade,
       amount: parseFloat(amount),

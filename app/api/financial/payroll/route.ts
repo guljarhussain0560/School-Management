@@ -29,10 +29,41 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Create payroll record
+      // Find the employee by employeeId to get the database id
+      const employee = await prisma.employee.findFirst({
+        where: {
+          OR: [
+            { id: employeeId },
+            { employeeId: employeeId }
+          ],
+          schoolId: session.user.schoolId
+        }
+      })
+
+      if (!employee) {
+        return NextResponse.json(
+          { error: 'Employee not found' },
+          { status: 404 }
+        )
+      }
+
+      // Check if employee is terminated
+      if (employee.status === 'TERMINATED') {
+        return NextResponse.json(
+          { 
+            error: 'Employee terminated',
+            message: 'Cannot create payroll record for terminated employee',
+            employeeName: employee.name,
+            employeeId: employee.employeeId
+          },
+          { status: 400 }
+        )
+      }
+
+      // Create payroll record using the employee's database id
       const payroll = await prisma.payroll.create({
         data: {
-          employeeId,
+          employeeId: employee.id, // Use the database id, not the employeeId string
           employeeName,
           department,
           position,
@@ -80,20 +111,67 @@ export async function POST(request: NextRequest) {
       const row = jsonData[i] as any
       
       try {
-        // Validate required fields
-        if (!row['Employee ID'] || !row['Name'] || !row['Department']) {
-          errors.push(`Row ${i + 2}: Missing required fields (Employee ID, Name, Department)`)
+        // Validate required fields for simplified format
+        if (!row['Employee ID'] || !row['Month'] || !row['Year']) {
+          errors.push(`Row ${i + 2}: Missing required fields (Employee ID, Month, Year)`)
+          continue
+        }
+
+        const employeeIdString = row['Employee ID'].toString().trim()
+        
+        // Find the employee by employeeId to get the database id and employee data
+        const employee = await prisma.employee.findFirst({
+          where: {
+            OR: [
+              { id: employeeIdString },
+              { employeeId: employeeIdString }
+            ],
+            schoolId: session.user.schoolId
+          }
+        })
+
+        if (!employee) {
+          errors.push(`Row ${i + 2}: Employee not found for ID: ${employeeIdString}`)
+          continue
+        }
+
+        // Check if employee is terminated
+        if (employee.status === 'TERMINATED') {
+          errors.push(`Row ${i + 2}: Employee terminated - ${employee.name} (${employeeIdString})`)
+          continue
+        }
+
+        // Get values from Excel or use defaults
+        const allowances = parseFloat(row['Allowances']) || 0
+        const deductions = parseFloat(row['Deductions']) || 0
+        const basicSalary = employee.salary || 0
+        const netSalary = basicSalary + allowances - deductions
+        const month = parseInt(row['Month']) || new Date().getMonth() + 1
+        const year = parseInt(row['Year']) || new Date().getFullYear()
+        const status = (row['Status']?.toString().toUpperCase() || 'PENDING') as any
+
+        // Validate month and year
+        if (month < 1 || month > 12) {
+          errors.push(`Row ${i + 2}: Invalid month (${month}). Must be between 1-12`)
+          continue
+        }
+
+        if (year < 2020 || year > 2030) {
+          errors.push(`Row ${i + 2}: Invalid year (${year}). Must be between 2020-2030`)
           continue
         }
 
         const payrollData = {
-          employeeId: row['Employee ID'].toString().trim(),
-          name: row['Name'].toString().trim(),
-          department: row['Department'].toString().trim(),
-          basicSalary: parseFloat(row['Basic Salary']) || 0,
-          allowances: parseFloat(row['Allowances']) || 0,
-          deductions: parseFloat(row['Deductions']) || 0,
-          netSalary: parseFloat(row['Net Salary']) || 0,
+          employeeId: employee.id, // Use the database id
+          name: employee.name,
+          department: employee.department,
+          basicSalary: basicSalary,
+          allowances: allowances,
+          deductions: deductions,
+          netSalary: netSalary,
+          month: month,
+          year: year,
+          status: status,
           schoolId: session.user.schoolId!,
           processedBy: session.user.id,
         }
@@ -104,14 +182,14 @@ export async function POST(request: NextRequest) {
             employeeId: payrollData.employeeId,
             employeeName: payrollData.name,
             department: payrollData.department,
-            position: row['Position']?.toString().trim() || '',
+            position: employee.position || '',
             basicSalary: payrollData.basicSalary,
             allowances: payrollData.allowances,
             deductions: payrollData.deductions,
             amount: payrollData.netSalary,
-            month: new Date().getMonth() + 1, // Current month
-            year: new Date().getFullYear(), // Current year
-            status: 'PENDING',
+            month: payrollData.month,
+            year: payrollData.year,
+            status: payrollData.status,
             uploadedBy: session.user.id,
             schoolId: session.user.schoolId!
           }
@@ -188,12 +266,28 @@ export async function GET(request: NextRequest) {
       where.status = status
     }
 
-    // Get total count for pagination
-    const totalCount = await prisma.payroll.count({ where })
+    // Get total count for pagination, excluding terminated employees
+    const totalCount = await prisma.payroll.count({ 
+      where: {
+        ...where,
+        employee: {
+          status: {
+            not: 'TERMINATED'
+          }
+        }
+      }
+    })
 
-    // Get payroll records with pagination
+    // Get payroll records with pagination, excluding terminated employees
     const payrolls = await prisma.payroll.findMany({
-      where,
+      where: {
+        ...where,
+        employee: {
+          status: {
+            not: 'TERMINATED'
+          }
+        }
+      },
       include: {
         employee: {
           select: {
@@ -201,7 +295,8 @@ export async function GET(request: NextRequest) {
             name: true,
             employeeId: true,
             department: true,
-            position: true
+            position: true,
+            status: true
           }
         },
         uploader: {
@@ -215,29 +310,47 @@ export async function GET(request: NextRequest) {
       take: limit
     })
 
-    // Calculate summary statistics
+    // Transform the data to include the employeeId string for display
+    const transformedPayrolls = payrolls.map(payroll => ({
+      ...payroll,
+      displayEmployeeId: payroll.employee?.employeeId || payroll.employeeId
+    }))
+
+    // Calculate summary statistics, excluding terminated employees
+    const baseWhere = { 
+      schoolId: session.user.schoolId,
+      employee: {
+        status: {
+          not: 'TERMINATED'
+        }
+      }
+    }
+
     const [totalPayroll, totalEmployees, teachingTotal, adminTotal, supportTotal] = await Promise.all([
       prisma.payroll.aggregate({
-        where: { schoolId: session.user.schoolId },
+        where: baseWhere,
         _sum: { amount: true }
       }),
       prisma.payroll.count({
-        where: { schoolId: session.user.schoolId }
+        where: baseWhere
       }),
       prisma.payroll.aggregate({
-        where: { schoolId: session.user.schoolId, department: 'Teaching' },
+        where: { 
+          ...baseWhere, 
+          department: 'Teaching' 
+        },
         _sum: { amount: true }
       }),
       prisma.payroll.aggregate({
         where: { 
-          schoolId: session.user.schoolId, 
+          ...baseWhere, 
           department: { in: ['Administration', 'IT', 'Security'] }
         },
         _sum: { amount: true }
       }),
       prisma.payroll.aggregate({
         where: { 
-          schoolId: session.user.schoolId, 
+          ...baseWhere, 
           department: { in: ['Maintenance', 'Transport', 'Support Staff'] }
         },
         _sum: { amount: true }
@@ -256,7 +369,7 @@ export async function GET(request: NextRequest) {
     const totalPages = Math.ceil(totalCount / limit)
 
     return NextResponse.json({
-      payrolls,
+      payrolls: transformedPayrolls,
       summary,
       pagination: {
         currentPage: page,

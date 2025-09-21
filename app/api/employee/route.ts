@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { generateUniqueEmployeeId } from '@/lib/employee-utils'
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,6 +29,29 @@ export async function GET(request: NextRequest) {
     // Build where clause
     const where: any = {
       schoolId: session.user.schoolId
+    }
+
+    // Check if there are any employees for this school
+    const schoolEmployeesCount = await prisma.employee.count({ where: { schoolId: session.user.schoolId } })
+    
+    // If no employees found for this school, check if there are employees without schoolId
+    if (schoolEmployeesCount === 0) {
+      const allEmployeesCount = await prisma.employee.count()
+      const employeesWithoutSchoolId = await prisma.employee.count({ where: { schoolId: null } })
+      
+      if (allEmployeesCount > 0 && employeesWithoutSchoolId > 0) {
+        // There are employees but they don't have a schoolId - this is the issue
+        console.log('⚠️ No employees found for schoolId:', session.user.schoolId)
+        console.log('⚠️ But there are', employeesWithoutSchoolId, 'employees without schoolId')
+        
+        // For now, let's include employees without schoolId to show the user what's available
+        // This is a temporary fix - the user should click "Fix School IDs" button
+        where.OR = [
+          { schoolId: session.user.schoolId },
+          { schoolId: null }
+        ]
+        delete where.schoolId
+      }
     }
 
     // Add search filter
@@ -74,12 +98,18 @@ export async function GET(request: NextRequest) {
     })
 
     // Calculate summary statistics
-    const [totalEmployees, activeEmployees, totalSalary] = await Promise.all([
+    const [totalEmployees, activeEmployees, inactiveEmployees, onLeaveEmployees, totalSalary] = await Promise.all([
       prisma.employee.count({
         where: { schoolId: session.user.schoolId }
       }),
       prisma.employee.count({
         where: { schoolId: session.user.schoolId, status: 'ACTIVE' }
+      }),
+      prisma.employee.count({
+        where: { schoolId: session.user.schoolId, status: 'INACTIVE' }
+      }),
+      prisma.employee.count({
+        where: { schoolId: session.user.schoolId, status: 'ON_LEAVE' }
       }),
       prisma.employee.aggregate({
         where: { schoolId: session.user.schoolId, status: 'ACTIVE' },
@@ -90,6 +120,8 @@ export async function GET(request: NextRequest) {
     const summary = {
       totalEmployees,
       activeEmployees,
+      inactiveEmployees,
+      onLeaveEmployees,
       totalSalary: Number(totalSalary._sum.salary || 0)
     }
 
@@ -170,8 +202,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate employee ID
-    const employeeId = `EMP${Date.now().toString().slice(-6)}`
+    // Generate unique employee ID
+    const employeeId = await generateUniqueEmployeeId()
 
     // Create employee record
     const employee = await prisma.employee.create({

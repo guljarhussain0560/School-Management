@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import MaintenanceManagement from '@/components/operations/MaintenanceManagement';
 
 interface TransportManagementDashboardProps {
   activeSubSection: string;
@@ -320,79 +321,7 @@ export default function TransportManagementDashboard({ activeSubSection, setActi
         );
 
       case 'maintenance-log':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Maintenance Log</h2>
-              <p className="text-gray-600">Track facility maintenance and repair status</p>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Maintenance Items
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {maintenanceItems.map((item) => (
-                  <div key={item.id} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h3 className="font-medium">{item.name}</h3>
-                        <p className="text-sm text-gray-500">Last checked: {item.lastChecked}</p>
-                      </div>
-                      <Badge 
-                        variant={
-                          item.status === 'OK' ? 'default' : 
-                          item.status === 'Needs Repair' ? 'destructive' : 
-                          'secondary'
-                        }
-                      >
-                        {item.status}
-                      </Badge>
-                    </div>
-                    <div className="space-y-3">
-                      <div>
-                        <Label htmlFor={`notes-${item.id}`}>Notes</Label>
-                        <Textarea
-                          id={`notes-${item.id}`}
-                          placeholder="Add maintenance notes..."
-                          value={item.notes}
-                          onChange={(e) => setMaintenanceItems(prev => prev.map(i => 
-                            i.id === item.id ? { ...i, notes: e.target.value } : i
-                          ))}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`photo-${item.id}`}>Proof Upload</Label>
-                        <Input
-                          id={`photo-${item.id}`}
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => setMaintenanceItems(prev => prev.map(i => 
-                            i.id === item.id ? { ...i, photo: e.target.files?.[0] || null } : i
-                          ))}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                <Button 
-                  onClick={() => {
-                    maintenanceItems.forEach(item => {
-                      handleMaintenanceUpdate(item.id, item.notes, item.photo);
-                    });
-                  }}
-                  className="w-full"
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Update Maintenance Status
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        );
+        return <MaintenanceManagement />;
 
       case 'safety-alerts':
         return (

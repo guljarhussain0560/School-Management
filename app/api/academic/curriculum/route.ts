@@ -15,40 +15,49 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { title, grade, subject, dueDate, description, fileUrl } = body
-
-    console.log('Assignment data received:', { title, grade, subject, dueDate, description, fileUrl })
+    const { subject, grade, module, progress } = body
 
     // Validate required fields
-    if (!title || !grade || !subject || !dueDate) {
+    if (!subject || !grade || !module || progress === undefined) {
       return NextResponse.json(
-        { error: 'Title, grade, subject, and due date are required' },
+        { error: 'Subject, grade, module, and progress are required' },
         { status: 400 }
       )
     }
 
-    // Validate due date is in the future
-    const dueDateObj = new Date(dueDate)
-    if (dueDateObj <= new Date()) {
+    // Validate progress is between 0 and 100
+    const progressNum = parseFloat(progress)
+    if (isNaN(progressNum) || progressNum < 0 || progressNum > 100) {
       return NextResponse.json(
-        { error: 'Due date must be in the future' },
+        { error: 'Progress must be a number between 0 and 100' },
         { status: 400 }
       )
     }
 
-    // Create assignment
-    const assignment = await prisma.assignment.create({
-      data: {
-        title,
-        grade,
+    // Create or update curriculum progress
+    const curriculum = await prisma.curriculumProgress.upsert({
+      where: {
+        subject_grade_module_schoolId: {
+          subject,
+          grade,
+          module,
+          schoolId: session.user.schoolId ?? ''
+        }
+      },
+      update: {
+        progress: progressNum,
+        updatedBy: session.user.id
+      },
+      create: {
         subject,
-        dueDate: dueDateObj,
-        description: description || null,
-        schoolId: session.user.schoolId ?? '', 
-        createdBy: session.user.id
+        grade,
+        module,
+        progress: progressNum,
+        schoolId: session.user.schoolId ?? '',
+        updatedBy: session.user.id
       },
       include: {
-        creator: {
+        updater: {
           select: {
             name: true
           }
@@ -57,17 +66,12 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({
-      message: 'Assignment created successfully',
-      assignment
+      message: 'Curriculum progress updated successfully',
+      curriculum
     })
 
   } catch (error) {
-    console.error('Error creating assignment:', error)
-    console.error('Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      code: (error as any)?.code,
-      meta: (error as any)?.meta
-    })
+    console.error('Error updating curriculum progress:', error)
     return NextResponse.json(
       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -92,7 +96,6 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || ''
     const grade = searchParams.get('grade') || ''
     const subject = searchParams.get('subject') || ''
-    const status = searchParams.get('status') || ''
 
     const skip = (page - 1) * limit
 
@@ -103,8 +106,8 @@ export async function GET(request: NextRequest) {
 
     if (search) {
       where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
+        { module: { contains: search, mode: 'insensitive' } },
+        { subject: { contains: search, mode: 'insensitive' } }
       ]
     }
 
@@ -116,44 +119,30 @@ export async function GET(request: NextRequest) {
       where.subject = subject
     }
 
-    if (status) {
-      where.status = status
-    }
-
-    // Get assignments with pagination
-    const [assignments, total] = await Promise.all([
-      prisma.assignment.findMany({
+    // Get curriculum progress with pagination
+    const [curriculum, total] = await Promise.all([
+      prisma.curriculumProgress.findMany({
         where,
         include: {
-          creator: {
+          updater: {
             select: {
               name: true
-            }
-          },
-          students: {
-            include: {
-              student: {
-                select: {
-                  name: true,
-                  studentId: true
-                }
-              }
             }
           }
         },
         orderBy: {
-          createdAt: 'desc'
+          updatedAt: 'desc'
         },
         skip,
         take: limit
       }),
-      prisma.assignment.count({ where })
+      prisma.curriculumProgress.count({ where })
     ])
 
     const totalPages = Math.ceil(total / limit)
 
     return NextResponse.json({
-      assignments,
+      curriculum,
       pagination: {
         page,
         limit,
@@ -163,7 +152,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error fetching assignments:', error)
+    console.error('Error fetching curriculum progress:', error)
     return NextResponse.json(
       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

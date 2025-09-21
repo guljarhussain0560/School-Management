@@ -3,6 +3,123 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const body = await request.json()
+    const { date, grade, subject, attendanceRecords } = body
+
+    console.log('Attendance data received:', { date, grade, subject, attendanceRecords })
+
+    // Validate required fields
+    if (!date || !grade || !subject || !attendanceRecords) {
+      return NextResponse.json(
+        { error: 'Date, grade, subject, and attendance records are required' },
+        { status: 400 }
+      )
+    }
+
+    // Check if attendance already exists for this date (simplified check)
+    try {
+      const existingAttendance = await prisma.attendance.findFirst({
+        where: {
+          date: new Date(date),
+          schoolId: session.user.schoolId
+        }
+      })
+
+      if (existingAttendance) {
+        return NextResponse.json(
+          { error: 'Attendance already recorded for this date' },
+          { status: 400 }
+        )
+      }
+    } catch (checkError) {
+      console.log('Could not check existing attendance, proceeding with creation:', checkError.message)
+    }
+
+    // Validate student IDs exist
+    const studentIds = attendanceRecords.map((record: any) => record.studentId)
+    const existingStudents = await prisma.student.findMany({
+      where: {
+        id: { in: studentIds },
+        schoolId: session.user.schoolId
+      },
+      select: { id: true }
+    })
+
+    const existingStudentIds = existingStudents.map(s => s.id)
+    const invalidStudentIds = studentIds.filter(id => !existingStudentIds.includes(id))
+    
+    if (invalidStudentIds.length > 0) {
+      return NextResponse.json(
+        { error: `Invalid student IDs: ${invalidStudentIds.join(', ')}` },
+        { status: 400 }
+      )
+    }
+
+    // Create attendance records
+    const attendanceData = attendanceRecords.map((record: any) => ({
+      studentId: record.studentId,
+      date: new Date(date),
+      isPresent: record.status === 'PRESENT', // Convert to boolean
+      schoolId: session.user.schoolId,
+      markedBy: session.user.id
+    }))
+
+    console.log('Attendance data to create:', attendanceData)
+    console.log('Session user:', { id: session.user.id, schoolId: session.user.schoolId })
+
+    let createdAttendance
+    try {
+      createdAttendance = await prisma.attendance.createMany({
+        data: attendanceData
+      })
+    } catch (createError) {
+      console.error('Error creating attendance records:', createError)
+      // Try creating records one by one to identify which one fails
+      const results = []
+      for (const record of attendanceData) {
+        try {
+          const result = await prisma.attendance.create({
+            data: record
+          })
+          results.push(result)
+        } catch (recordError) {
+          console.error('Error creating individual record:', record, recordError)
+          throw recordError
+        }
+      }
+      createdAttendance = { count: results.length }
+    }
+
+    return NextResponse.json({
+      message: 'Attendance recorded successfully',
+      count: createdAttendance.count
+    })
+
+  } catch (error) {
+    console.error('Error recording attendance:', error)
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta
+    })
+    return NextResponse.json(
+      { error: 'Internal server error', details: error.message },
+      { status: 500 }
+    )
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -17,45 +134,27 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const date = searchParams.get('date')
     const grade = searchParams.get('grade')
-    const studentId = searchParams.get('studentId')
+    const subject = searchParams.get('subject')
 
     // Build where clause
     const where: any = {
-      student: {
-        schoolId: session.user.schoolId
-      }
+      schoolId: session.user.schoolId
     }
 
     if (date) {
-      const startDate = new Date(date)
-      const endDate = new Date(date)
-      endDate.setDate(endDate.getDate() + 1)
-      where.date = {
-        gte: startDate,
-        lt: endDate
-      }
-    }
-
-    if (grade) {
-      where.student = {
-        ...where.student,
-        grade
-      }
-    }
-
-    if (studentId) {
-      where.studentId = studentId
+      where.date = new Date(date)
     }
 
     // Get attendance records
-    const attendance = await prisma.attendance.findMany({
+    const attendanceRecords = await prisma.attendance.findMany({
       where,
       include: {
         student: {
           select: {
             id: true,
+            studentId: true,
             name: true,
-            grade: true
+            rollNumber: true
           }
         },
         marker: {
@@ -64,85 +163,17 @@ export async function GET(request: NextRequest) {
           }
         }
       },
-      orderBy: { date: 'desc' }
-    })
-
-    return NextResponse.json({ attendance })
-
-  } catch (error) {
-    console.error('Get attendance error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session || session.user.role !== 'TEACHER') {
-      return NextResponse.json(
-        { error: 'Unauthorized - Teacher access required' },
-        { status: 403 }
-      )
-    }
-
-    const body = await request.json()
-    const { studentId, date, isPresent } = body
-
-    // Validation
-    if (!studentId || !date) {
-      return NextResponse.json(
-        { error: 'Student ID and date are required' },
-        { status: 400 }
-      )
-    }
-
-    // Check if student belongs to same school
-    const student = await prisma.student.findFirst({
-      where: {
-        id: studentId,
-        schoolId: session.user.schoolId!
-      }
-    })
-
-    if (!student) {
-      return NextResponse.json(
-        { error: 'Student not found' },
-        { status: 404 }
-      )
-    }
-
-    // Create or update attendance record
-    const attendance = await prisma.attendance.upsert({
-      where: {
-        studentId_date: {
-          studentId,
-          date: new Date(date)
-        }
-      },
-      update: {
-        isPresent: Boolean(isPresent),
-        markedBy: session.user.id
-      },
-      create: {
-        studentId,
-        date: new Date(date),
-        isPresent: Boolean(isPresent),
-        markedBy: session.user.id,
-        schoolId: session.user.schoolId!
+      orderBy: {
+        createdAt: 'desc'
       }
     })
 
     return NextResponse.json({
-      message: 'Attendance recorded successfully',
-      attendance
-    }, { status: 201 })
+      attendanceRecords
+    })
 
   } catch (error) {
-    console.error('Record attendance error:', error)
+    console.error('Error fetching attendance records:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

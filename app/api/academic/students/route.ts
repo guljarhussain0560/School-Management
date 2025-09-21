@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { generateUniqueStudentId } from '@/lib/student-utils'
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,9 +36,12 @@ export async function GET(request: NextRequest) {
         where,
         select: {
           id: true,
+          studentId: true,
           name: true,
           age: true,
           grade: true,
+          rollNumber: true,
+          admissionNumber: true,
           parentContact: true,
           address: true,
           createdAt: true,
@@ -189,8 +193,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate unique roll number and admission number if not provided
-    const finalRollNumber = rollNumber || `STU${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    // Generate unique student ID, roll number and admission number if not provided
+    const finalStudentId = await generateUniqueStudentId()
+    const finalRollNumber = rollNumber || `RN${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
     const finalAdmissionNumber = admissionNumber || `ADM${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
 
     // Validate bus route ID if provided
@@ -212,6 +217,7 @@ export async function POST(request: NextRequest) {
 
     // Create student data object
     const studentCreateData: any = {
+      studentId: finalStudentId,
       name,
       email,
       age: parseInt(age),
@@ -288,8 +294,11 @@ export async function POST(request: NextRequest) {
       message: 'Student enrolled successfully',
       student: {
         id: student.id,
+        studentId: student.studentId,
         name: student.name,
         grade: student.grade,
+        rollNumber: student.rollNumber,
+        admissionNumber: student.admissionNumber,
         enrolledDate: student.createdAt.toISOString().split('T')[0],
         status: (student as any).status || 'PENDING'
       }

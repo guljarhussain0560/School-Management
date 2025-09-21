@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { generateUniqueStudentId } from '@/lib/student-utils'
 import * as XLSX from 'xlsx'
 
 export async function POST(request: NextRequest) {
@@ -47,8 +48,9 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        // Generate unique roll number and admission number
-        const rollNumber = `STU${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        // Generate unique student ID, roll number and admission number
+        const studentId = await generateUniqueStudentId()
+        const rollNumber = `RN${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
         const admissionNumber = `ADM${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
 
         // Validate bus route ID if provided
@@ -90,6 +92,7 @@ export async function POST(request: NextRequest) {
         })
 
         const studentData = {
+          studentId: studentId,
           name: row['Name'].toString().trim(),
           email: row['Email']?.toString().trim() || '',
           age: parseInt(row['Age']),

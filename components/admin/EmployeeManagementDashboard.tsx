@@ -24,7 +24,8 @@ import {
   Phone,
   Mail,
   Calendar,
-  DollarSign
+  DollarSign,
+  RefreshCw
 } from 'lucide-react'
 
 interface Employee {
@@ -57,6 +58,8 @@ interface Employee {
 interface EmployeeSummary {
   totalEmployees: number
   activeEmployees: number
+  inactiveEmployees: number
+  onLeaveEmployees: number
   totalSalary: number
 }
 
@@ -70,6 +73,8 @@ export default function EmployeeManagementDashboard({ activeSubSection, setActiv
   const [summary, setSummary] = useState<EmployeeSummary>({
     totalEmployees: 0,
     activeEmployees: 0,
+    inactiveEmployees: 0,
+    onLeaveEmployees: 0,
     totalSalary: 0
   })
   const [isLoading, setIsLoading] = useState(false)
@@ -149,6 +154,8 @@ export default function EmployeeManagementDashboard({ activeSubSection, setActiv
           setSummary({
             totalEmployees: data.summary.totalEmployees || 0,
             activeEmployees: data.summary.activeEmployees || 0,
+            inactiveEmployees: data.summary.inactiveEmployees || 0,
+            onLeaveEmployees: data.summary.onLeaveEmployees || 0,
             totalSalary: data.summary.totalSalary || 0
           })
         }
@@ -198,6 +205,16 @@ export default function EmployeeManagementDashboard({ activeSubSection, setActiv
           aadharNumber: '',
           notes: ''
         })
+        
+        // Update summary for new employee
+        if (data.employee) {
+          updateSummaryForNewEmployee(data.employee)
+          
+          // Add new employee to the local state
+          setEmployees(prevEmployees => [data.employee, ...prevEmployees])
+        }
+        
+        // Refresh the employee list to get the latest data
         fetchEmployees()
       } else {
         const error = await response.json()
@@ -216,6 +233,140 @@ export default function EmployeeManagementDashboard({ activeSubSection, setActiv
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
+  }
+
+  const handleFixSchoolIds = async () => {
+    try {
+      const response = await fetch('/api/employee/fix-school-ids', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        toast.success(result.message)
+        // Refresh the employee list
+        fetchEmployees()
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to fix school IDs')
+      }
+    } catch (error) {
+      console.error('Error fixing school IDs:', error)
+      toast.error('Failed to fix school IDs')
+    }
+  }
+
+  const updateSummaryStats = (updatedEmployee: any, newStatus: string) => {
+    setSummary(prevSummary => {
+      const newSummary = { ...prevSummary }
+      
+      // Find the employee being updated to get their previous status and salary
+      const currentEmployee = employees.find(emp => 
+        emp.id === updatedEmployee.id || emp.employeeId === updatedEmployee.employeeId
+      )
+      
+      if (currentEmployee) {
+        const oldStatus = currentEmployee.status
+        const salary = currentEmployee.salary
+        
+        // Update counts based on status change
+        // Remove from old status
+        if (oldStatus === 'ACTIVE') {
+          newSummary.activeEmployees = Math.max(0, newSummary.activeEmployees - 1)
+          newSummary.totalSalary = Math.max(0, newSummary.totalSalary - salary)
+        } else if (oldStatus === 'INACTIVE') {
+          newSummary.inactiveEmployees = Math.max(0, newSummary.inactiveEmployees - 1)
+        } else if (oldStatus === 'ON_LEAVE') {
+          newSummary.onLeaveEmployees = Math.max(0, newSummary.onLeaveEmployees - 1)
+        }
+        
+        // Add to new status
+        if (newStatus === 'ACTIVE') {
+          newSummary.activeEmployees = newSummary.activeEmployees + 1
+          newSummary.totalSalary = newSummary.totalSalary + salary
+        } else if (newStatus === 'INACTIVE') {
+          newSummary.inactiveEmployees = newSummary.inactiveEmployees + 1
+        } else if (newStatus === 'ON_LEAVE') {
+          newSummary.onLeaveEmployees = newSummary.onLeaveEmployees + 1
+        }
+      }
+      
+      return newSummary
+    })
+  }
+
+  const updateSummaryForNewEmployee = (newEmployee: any) => {
+    setSummary(prevSummary => {
+      const newSummary = { ...prevSummary }
+      
+      // Increment total employees
+      newSummary.totalEmployees = newSummary.totalEmployees + 1
+      
+      // Add to appropriate status count (new employees are typically ACTIVE)
+      const status = newEmployee.status || 'ACTIVE'
+      if (status === 'ACTIVE') {
+        newSummary.activeEmployees = newSummary.activeEmployees + 1
+        newSummary.totalSalary = newSummary.totalSalary + (newEmployee.salary || 0)
+      } else if (status === 'INACTIVE') {
+        newSummary.inactiveEmployees = newSummary.inactiveEmployees + 1
+      } else if (status === 'ON_LEAVE') {
+        newSummary.onLeaveEmployees = newSummary.onLeaveEmployees + 1
+      }
+      
+      return newSummary
+    })
+  }
+
+  const fetchSummaryOnly = async () => {
+    try {
+      const response = await fetch('/api/employee/summary')
+      if (response.ok) {
+        const data = await response.json()
+        setSummary(data.summary)
+      }
+    } catch (error) {
+      console.error('Error fetching summary:', error)
+    }
+  }
+
+  const handleStatusChange = async (employeeId: string, newStatus: string) => {
+    try {
+      const response = await fetch(`/api/employee/${employeeId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        const updatedEmployee = result.employee
+        
+        // Update only the specific employee in the local state
+        setEmployees(prevEmployees => 
+          prevEmployees.map(emp => 
+            emp.id === updatedEmployee.id || emp.employeeId === updatedEmployee.employeeId
+              ? { ...emp, status: newStatus as "ACTIVE" | "INACTIVE" | "TERMINATED" | "ON_LEAVE" }
+              : emp
+          )
+        )
+        
+        // Update summary statistics only
+        updateSummaryStats(updatedEmployee, newStatus)
+        
+        toast.success(`Employee status updated to ${newStatus}`)
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to update employee status')
+      }
+    } catch (error) {
+      console.error('Error updating employee status:', error)
+      toast.error('Failed to update employee status')
+    }
   }
 
   const downloadEmployeeList = () => {
@@ -453,8 +604,8 @@ export default function EmployeeManagementDashboard({ activeSubSection, setActiv
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Employee Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
@@ -478,6 +629,34 @@ export default function EmployeeManagementDashboard({ activeSubSection, setActiv
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Active Employees</p>
                 <p className="text-2xl font-bold">{summary.activeEmployees}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                <Users className="h-6 w-6 text-gray-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Inactive Employees</p>
+                <p className="text-2xl font-bold">{summary.inactiveEmployees}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                <Users className="h-6 w-6 text-yellow-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">On Leave</p>
+                <p className="text-2xl font-bold">{summary.onLeaveEmployees}</p>
               </div>
             </div>
           </CardContent>
@@ -600,11 +779,24 @@ export default function EmployeeManagementDashboard({ activeSubSection, setActiv
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <Badge className={statusColors[employee.status]}>
-                        {employee.status}
-                      </Badge>
-                      <div className="text-sm text-gray-500">
-                        {new Date(employee.dateOfJoining).toLocaleDateString()}
+                      <div className="flex flex-col items-end gap-1">
+                        <Select 
+                          value={employee.status} 
+                          onValueChange={(value) => handleStatusChange(employee.id, value)}
+                        >
+                          <SelectTrigger className="w-32 h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ACTIVE">Active</SelectItem>
+                            <SelectItem value="INACTIVE">Inactive</SelectItem>
+                            <SelectItem value="TERMINATED">Terminated</SelectItem>
+                            <SelectItem value="ON_LEAVE">On Leave</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <div className="text-sm text-gray-500">
+                          {new Date(employee.dateOfJoining).toLocaleDateString()}
+                        </div>
                       </div>
                       <Button variant="outline" size="sm">
                         <Eye className="h-4 w-4 mr-1" />
@@ -649,6 +841,7 @@ export default function EmployeeManagementDashboard({ activeSubSection, setActiv
           </CardContent>
         </Card>
       )}
+
     </div>
   )
 }
