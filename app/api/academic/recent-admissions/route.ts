@@ -57,7 +57,11 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         name: true,
-        grade: true,
+        class: {
+          select: {
+            className: true
+          }
+        },
         createdAt: true,
         updatedAt: true,
         email: true,
@@ -75,7 +79,7 @@ export async function GET(request: NextRequest) {
     const recentAdmissions = students.map((student) => ({
       id: student.id,
       name: student.name,
-      grade: student.grade,
+      grade: student.class?.className || 'Unknown',
       enrolledDate: student.createdAt.toISOString().split('T')[0],
       status: student.status, // Use actual status from database
       parentName: student.parentName,

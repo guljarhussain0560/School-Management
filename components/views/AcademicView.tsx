@@ -15,10 +15,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Plus, Edit, Trash2, Save, X, Upload, Download, 
   FileText, Users, Calendar, BookOpen, BarChart3,
-  CheckCircle, XCircle, Clock
+  CheckCircle, XCircle, Clock, UserCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSession } from 'next-auth/react';
+import TeacherAssignments from '@/components/admin/TeacherAssignments';
 
 const AcademicView = () => {
   const { data: session } = useSession();
@@ -301,11 +302,12 @@ const AcademicView = () => {
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="performance">Performance</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
           <TabsTrigger value="assignments">Assignments</TabsTrigger>
           <TabsTrigger value="curriculum">Curriculum</TabsTrigger>
+          <TabsTrigger value="teacher-assignments">Teacher Allocation</TabsTrigger>
         </TabsList>
 
         {/* Student Performance Tab */}
@@ -879,6 +881,11 @@ const AcademicView = () => {
               </Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Teacher Assignments Tab */}
+        <TabsContent value="teacher-assignments" className="space-y-4">
+          <TeacherAssignments />
         </TabsContent>
       </Tabs>
     </div>

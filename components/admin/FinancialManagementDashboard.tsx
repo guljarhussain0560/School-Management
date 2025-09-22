@@ -20,6 +20,9 @@ import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { downloadReceiptPDF } from '@/lib/pdf-receipt';
 import { downloadSalarySlipPDF } from '@/lib/salary-slip-pdf';
+import FeeStructureManagement from '../financial/FeeStructureManagement';
+import StudentFeeDetails from '../financial/StudentFeeDetails';
+import FeeCollectionManagement from '../financial/FeeCollectionManagement';
 
 interface Student {
   id: string;
@@ -161,7 +164,7 @@ export default function FinancialManagementDashboard({ activeSubSection, setActi
     fetchAvailableStudents();
     fetchRecentPayrolls();
     fetchRecentExpenses(1, expenseSearchTerm, expenseSearchField, expenseDepartmentFilter, expenseStatusFilter);
-  }, []);
+  }, [expenseSearchTerm, expenseSearchField, expenseDepartmentFilter, expenseStatusFilter]);
 
   const [feeStats, setFeeStats] = useState({
     totalAmount: 0,
@@ -1046,7 +1049,7 @@ export default function FinancialManagementDashboard({ activeSubSection, setActi
                   <div className="flex justify-end pt-4">
                     <Button 
                       type="submit" 
-                      disabled={loading}
+                      disabled={loading || !feeForm.studentId || !feeForm.amount || !feeForm.paymentMode}
                       className="bg-green-600 hover:bg-green-700 text-white px-8 py-2.5 font-semibold"
                     >
                       {loading ? (
@@ -1620,7 +1623,10 @@ export default function FinancialManagementDashboard({ activeSubSection, setActi
                       </Select>
                     </div>
                   </div>
-                  <Button type="submit" disabled={loading}>
+                  <Button 
+                    type="submit" 
+                    disabled={loading || !payrollForm.employeeId || !payrollForm.employeeName || !payrollForm.basicSalary || !payrollForm.netSalary || !payrollForm.month || !payrollForm.year}
+                  >
                     {loading ? 'Creating...' : 'Create Payroll Record'}
                   </Button>
                 </form>
@@ -1646,8 +1652,7 @@ export default function FinancialManagementDashboard({ activeSubSection, setActi
                       <h3 className="text-lg font-medium text-gray-900">Uploading Payroll Data...</h3>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div 
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${uploadProgress}%` }}
+                          className={`bg-blue-600 h-2 rounded-full progress-${Math.round(uploadProgress)}`}
                         ></div>
                       </div>
                       <p className="text-sm text-gray-600">{uploadProgress}% Complete</p>
@@ -2065,7 +2070,10 @@ export default function FinancialManagementDashboard({ activeSubSection, setActi
                     />
                     <p className="text-xs text-gray-500 mt-1">Upload receipt for expense verification</p>
                   </div>
-                  <Button type="submit" disabled={isSubmittingBudget}>
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmittingBudget || !budgetForm.department || !budgetForm.amount}
+                  >
                     {isSubmittingBudget ? 'Recording...' : 'Record Expense'}
                   </Button>
                 </form>
@@ -2462,10 +2470,7 @@ export default function FinancialManagementDashboard({ activeSubSection, setActi
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div 
-                              className="bg-green-500 h-2 rounded-full" 
-                              style={{ 
-                                width: budgetSummary.totalAmount > 0 ? `${(budgetSummary.completedTotal / budgetSummary.totalAmount) * 100}%` : '0%' 
-                              }}
+                              className={`bg-green-500 h-2 rounded-full progress-${Math.round(budgetSummary.totalAmount > 0 ? (budgetSummary.completedTotal / budgetSummary.totalAmount) * 100 : 0)}`}
                             ></div>
                           </div>
                         </div>
@@ -2480,10 +2485,7 @@ export default function FinancialManagementDashboard({ activeSubSection, setActi
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div 
-                              className="bg-blue-500 h-2 rounded-full" 
-                              style={{ 
-                                width: budgetSummary.totalAmount > 0 ? `${(budgetSummary.approvedTotal / budgetSummary.totalAmount) * 100}%` : '0%' 
-                              }}
+                              className={`bg-blue-500 h-2 rounded-full progress-${Math.round(budgetSummary.totalAmount > 0 ? (budgetSummary.approvedTotal / budgetSummary.totalAmount) * 100 : 0)}`}
                             ></div>
                           </div>
                         </div>
@@ -2498,10 +2500,7 @@ export default function FinancialManagementDashboard({ activeSubSection, setActi
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div 
-                              className="bg-orange-500 h-2 rounded-full" 
-                              style={{ 
-                                width: budgetSummary.totalAmount > 0 ? `${(budgetSummary.underReviewTotal / budgetSummary.totalAmount) * 100}%` : '0%' 
-                              }}
+                              className={`bg-orange-500 h-2 rounded-full progress-${Math.round(budgetSummary.totalAmount > 0 ? (budgetSummary.underReviewTotal / budgetSummary.totalAmount) * 100 : 0)}`}
                             ></div>
                           </div>
                         </div>
@@ -2516,10 +2515,7 @@ export default function FinancialManagementDashboard({ activeSubSection, setActi
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div 
-                              className="bg-yellow-500 h-2 rounded-full" 
-                              style={{ 
-                                width: budgetSummary.totalAmount > 0 ? `${(budgetSummary.pendingTotal / budgetSummary.totalAmount) * 100}%` : '0%' 
-                              }}
+                              className={`bg-yellow-500 h-2 rounded-full progress-${Math.round(budgetSummary.totalAmount > 0 ? (budgetSummary.pendingTotal / budgetSummary.totalAmount) * 100 : 0)}`}
                             ></div>
                           </div>
                         </div>
@@ -2529,6 +2525,60 @@ export default function FinancialManagementDashboard({ activeSubSection, setActi
                 </div>
               </CardContent>
             </Card>
+          </div>
+        );
+
+      case 'fee-structures':
+        return <FeeStructureManagement />;
+
+      case 'fee-collections':
+        return <FeeCollectionManagement />;
+
+      case 'student-fees':
+        return <StudentFeeDetails />;
+
+      case 'financial-reports':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Financial Reports</h2>
+              <p className="text-gray-600">Generate comprehensive financial reports</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <Card className="cursor-pointer hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5 text-green-600" />
+                    Fee Collection Report
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Monthly and yearly fee collection reports</p>
+                </CardContent>
+              </Card>
+              <Card className="cursor-pointer hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-blue-600" />
+                    Payroll Report
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Employee salary and payroll reports</p>
+                </CardContent>
+              </Card>
+              <Card className="cursor-pointer hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5 text-purple-600" />
+                    Budget Report
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Budget utilization and expense reports</p>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         );
 

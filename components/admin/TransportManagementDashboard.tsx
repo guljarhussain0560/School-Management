@@ -14,11 +14,14 @@ import {
   CheckCircle, Clock, AlertCircle, Eye, UserPlus, DollarSign, 
   Building, Users, BarChart3, Share2,
   BookOpen, Calendar, FileText, Settings, Menu, X, UploadCloud, UserPlus2,
-  ChevronLeft, ChevronRight, Filter, RefreshCw, MapPin
+  ChevronLeft, ChevronRight, Filter, RefreshCw, MapPin, Car, Wrench
 } from 'lucide-react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import MaintenanceManagement from '@/components/operations/MaintenanceManagement';
+import OperationsTransport from '@/components/operations/OperationsTransport';
+import BusManagement from '../transport/BusManagement';
+import RouteManagement from '../transport/RouteManagement';
 
 interface TransportManagementDashboardProps {
   activeSubSection: string;
@@ -198,127 +201,14 @@ export default function TransportManagementDashboard({ activeSubSection, setActi
 
   const renderContent = () => {
     switch (activeSubSection) {
-      case 'operations-transport':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Operations & Transport</h2>
-              <p className="text-gray-600">Bus Route & Tracking - Manage bus routes and real-time tracking</p>
-            </div>
+      case 'bus-management':
+        return <BusManagement />;
 
-            {/* Bus Routes */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building className="h-5 w-5" />
-                  Bus Routes
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {busRoutes.map((route) => (
-                  <div key={route.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-4">
-                      <div>
-                        <p className="font-medium">Route {route.id}</p>
-                        <p className="text-sm text-gray-500">{route.students} students</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center">
-                        <Select
-                          value={route.status}
-                          onValueChange={(value) => handleRouteStatusUpdate(route.id, value, route.delayReason)}
-                        >
-                          <SelectTrigger className="w-32 h-9">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="On Time">On Time</SelectItem>
-                            <SelectItem value="Delayed">Delayed</SelectItem>
-                            <SelectItem value="Cancelled">Cancelled</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex items-center">
-                        <Select
-                          value={route.delayReason}
-                          onValueChange={(value) => handleRouteStatusUpdate(route.id, route.status, value)}
-                        >
-                          <SelectTrigger className="w-40 h-9">
-                            <SelectValue placeholder="Select reason" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Traffic">Traffic</SelectItem>
-                            <SelectItem value="Weather">Weather</SelectItem>
-                            <SelectItem value="Mechanical">Mechanical</SelectItem>
-                            <SelectItem value="Driver">Driver Issue</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex items-center">
-                        <Button variant="outline" size="sm" className="h-9">
-                          <MapPin className="h-4 w-4 mr-2" />
-                          Live GPS
-                        </Button>
-                      </div>
-                      <div className="flex items-center">
-                        <Badge variant={route.status === 'On Time' ? 'default' : 'destructive'} className="h-9 px-3 flex items-center">
-                          {route.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+      case 'route-management':
+        return <RouteManagement />;
 
-            {/* Student Route Assignment */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Student Route Assignment</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleStudentRouteAssignment} className="flex gap-4">
-                  <div className="flex-1">
-                    <Label htmlFor="studentId">Student</Label>
-                    <Select
-                      value={studentRouteForm.studentId}
-                      onValueChange={(value) => setStudentRouteForm({...studentRouteForm, studentId: value})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select student" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ST001">Alice Johnson</SelectItem>
-                        <SelectItem value="ST002">Bob Smith</SelectItem>
-                        <SelectItem value="ST003">Carol Davis</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex-1">
-                    <Label htmlFor="routeId">Assign to Route</Label>
-                    <Select
-                      value={studentRouteForm.routeId}
-                      onValueChange={(value) => setStudentRouteForm({...studentRouteForm, routeId: value})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select route" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="A">Route A</SelectItem>
-                        <SelectItem value="B">Route B</SelectItem>
-                        <SelectItem value="C">Route C</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-end">
-                    <Button type="submit">Assign Student</Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
-        );
+      case 'operations-dashboard':
+        return <OperationsTransport />;
 
       case 'maintenance-log':
         return <MaintenanceManagement />;
@@ -457,6 +347,84 @@ export default function TransportManagementDashboard({ activeSubSection, setActi
                 </div>
               </CardContent>
             </Card>
+          </div>
+        );
+
+      case 'transport-reports':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Transport Reports</h2>
+              <p className="text-gray-600">Generate comprehensive transport and operations reports</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <Card className="cursor-pointer hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Car className="h-5 w-5 text-blue-600" />
+                    Bus Utilization Report
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Bus usage and efficiency reports</p>
+                </CardContent>
+              </Card>
+              <Card className="cursor-pointer hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-green-600" />
+                    Route Performance Report
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Route efficiency and timing reports</p>
+                </CardContent>
+              </Card>
+              <Card className="cursor-pointer hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Wrench className="h-5 w-5 text-orange-600" />
+                    Maintenance Report
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Vehicle maintenance and service reports</p>
+                </CardContent>
+              </Card>
+              <Card className="cursor-pointer hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-red-600" />
+                    Safety Report
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Safety incidents and alerts reports</p>
+                </CardContent>
+              </Card>
+              <Card className="cursor-pointer hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-purple-600" />
+                    Student Transport Report
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Student transport usage and statistics</p>
+                </CardContent>
+              </Card>
+              <Card className="cursor-pointer hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5 text-green-600" />
+                    Transport Cost Report
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Transport operational cost analysis</p>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         );
 

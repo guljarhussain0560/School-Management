@@ -77,14 +77,46 @@ export async function POST(request: NextRequest) {
           continue
         }
 
+        // Find subject and class
+        const subjectRecord = await prisma.subject.findFirst({
+          where: {
+            subjectName: {
+              contains: String(subject),
+              mode: 'insensitive'
+            },
+            schoolId: session.user.schoolId!
+          }
+        });
+
+        const classRecord = await prisma.class.findFirst({
+          where: {
+            className: {
+              contains: `Class ${String(grade)}`,
+              mode: 'insensitive'
+            },
+            schoolId: session.user.schoolId!
+          }
+        });
+
+        if (!subjectRecord) {
+          results.errors++
+          results.errorDetails.push(`Row ${i + 2}: Subject '${subject}' not found`)
+          continue
+        }
+
+        if (!classRecord) {
+          results.errors++
+          results.errorDetails.push(`Row ${i + 2}: Class '${grade}' not found`)
+          continue
+        }
+
         // Upsert curriculum progress
         await prisma.curriculumProgress.upsert({
           where: {
-            subject_grade_module_schoolId: {
-              subject: String(subject),
-              grade: String(grade),
-              module: String(module),
-              schoolId: session.user.schoolId ?? ''
+            subjectId_classId_module: {
+              subjectId: subjectRecord.id,
+              classId: classRecord.id,
+              module: String(module)
             }
           },
           update: {
@@ -92,8 +124,8 @@ export async function POST(request: NextRequest) {
             updatedBy: session.user.id
           },
           create: {
-            subject: String(subject),
-            grade: String(grade),
+            subjectId: subjectRecord.id,
+            classId: classRecord.id,
             module: String(module),
             progress: progressNum,
             schoolId: session.user.schoolId ?? '',

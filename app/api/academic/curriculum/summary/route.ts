@@ -35,11 +35,19 @@ export async function GET(request: NextRequest) {
     const curriculumData = await prisma.curriculumProgress.findMany({
       where,
       select: {
-        subject: true,
-        grade: true,
         module: true,
         progress: true,
-        updatedAt: true
+        updatedAt: true,
+        subject: {
+          select: {
+            subjectName: true
+          }
+        },
+        class: {
+          select: {
+            className: true
+          }
+        }
       },
       orderBy: {
         updatedAt: 'desc'
@@ -69,8 +77,9 @@ export async function GET(request: NextRequest) {
 
       // Group by grade
       curriculumData.forEach(item => {
-        if (!summary.byGrade[item.grade]) {
-          summary.byGrade[item.grade] = {
+        const gradeName = item.class.className;
+        if (!summary.byGrade[gradeName]) {
+          summary.byGrade[gradeName] = {
             totalModules: 0,
             averageProgress: 0,
             completedModules: 0,
@@ -79,7 +88,7 @@ export async function GET(request: NextRequest) {
           }
         }
         
-        const gradeData = summary.byGrade[item.grade]
+        const gradeData = summary.byGrade[gradeName]
         gradeData.totalModules++
         gradeData.averageProgress += item.progress
         
@@ -96,8 +105,9 @@ export async function GET(request: NextRequest) {
 
       // Group by subject
       curriculumData.forEach(item => {
-        if (!summary.bySubject[item.subject]) {
-          summary.bySubject[item.subject] = {
+        const subjectName = item.subject.subjectName;
+        if (!summary.bySubject[subjectName]) {
+          summary.bySubject[subjectName] = {
             totalModules: 0,
             averageProgress: 0,
             completedModules: 0,
@@ -106,7 +116,7 @@ export async function GET(request: NextRequest) {
           }
         }
         
-        const subjectData = summary.bySubject[item.subject]
+        const subjectData = summary.bySubject[subjectName]
         subjectData.totalModules++
         subjectData.averageProgress += item.progress
         

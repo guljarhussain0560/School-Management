@@ -1,22 +1,96 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
-const prisma = new PrismaClient();
-
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const busRoutes = await prisma.busRoute.findMany({
-      include: {
-        students: {
-          select: {
-            id: true,
-            name: true
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const status = searchParams.get('status');
+    const search = searchParams.get('search') || '';
+
+    const skip = (page - 1) * limit;
+
+    // Build where clause
+    const where: any = {
+      schoolId: session.user.schoolId!
+    };
+
+    if (status && status !== 'all') {
+      where.status = status;
+    }
+
+    if (search) {
+      where.OR = [
+        { routeName: { contains: search, mode: 'insensitive' } },
+        { bus: { busNumber: { contains: search, mode: 'insensitive' } } }
+      ];
+    }
+
+    const [routes, totalCount] = await Promise.all([
+      prisma.busRoute.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          bus: {
+            select: {
+              id: true,
+              busNumber: true,
+              busName: true,
+              driverName: true,
+              capacity: true
+            }
+          },
+          manager: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          },
+          students: {
+            select: {
+              id: true,
+              studentId: true,
+              name: true,
+              class: {
+                select: {
+                  className: true,
+                  classCode: true
+                }
+              }
+            }
           }
         }
+      }),
+      prisma.busRoute.count({ where })
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return NextResponse.json({
+      routes,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalCount,
+        limit
       }
     });
 
-    return NextResponse.json({ busRoutes });
   } catch (error) {
     console.error('Error fetching bus routes:', error);
     return NextResponse.json(
@@ -28,86 +102,108 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { studentId, routeId } = await request.json();
-
-    if (!studentId || !routeId) {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
       return NextResponse.json(
-        { error: 'Student ID and Route ID are required' },
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const {
+      routeName,
+      busId,
+      status = 'ON_TIME'
+    } = await request.json();
+
+    if (!routeName || !busId) {
+      return NextResponse.json(
+        { error: 'Route name and bus ID are required' },
         { status: 400 }
       );
     }
 
-    // Check if student exists
-    const student = await prisma.student.findUnique({
-      where: { id: studentId }
-    });
-
-    if (!student) {
-      return NextResponse.json(
-        { error: 'Student not found' },
-        { status: 404 }
-      );
-    }
-
-    // Check if route exists
-    const route = await prisma.busRoute.findUnique({
-      where: { id: routeId }
-    });
-
-    if (!route) {
-      return NextResponse.json(
-        { error: 'Route not found' },
-        { status: 404 }
-      );
-    }
-
-    // Assign student to route
-    await prisma.student.update({
-      where: { id: studentId },
-      data: { busRouteId: routeId }
-    });
-
-    return NextResponse.json({ 
-      message: 'Student assigned to route successfully' 
-    });
-  } catch (error) {
-    console.error('Error assigning student to route:', error);
-    return NextResponse.json(
-      { error: 'Failed to assign student to route' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function PUT(request: NextRequest) {
-  try {
-    const { routeId, status, delayReason } = await request.json();
-
-    if (!routeId || !status) {
-      return NextResponse.json(
-        { error: 'Route ID and status are required' },
-        { status: 400 }
-      );
-    }
-
-    // Update route status
-    const updatedRoute = await prisma.busRoute.update({
-      where: { id: routeId },
-      data: { 
-        status,
-        delayReason: delayReason || null,
-        lastUpdated: new Date()
+    // Check if bus exists and belongs to school
+    const bus = await prisma.bus.findFirst({
+      where: {
+        id: busId,
+        schoolId: session.user.schoolId!
       }
     });
 
-    return NextResponse.json({ 
-      message: 'Route status updated successfully',
-      route: updatedRoute
+    if (!bus) {
+      return NextResponse.json(
+        { error: 'Bus not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if route name already exists for this school
+    const existingRoute = await prisma.busRoute.findFirst({
+      where: {
+        routeName,
+        schoolId: session.user.schoolId!
+      }
     });
+
+    if (existingRoute) {
+      return NextResponse.json(
+        { error: 'Route name already exists' },
+        { status: 400 }
+      );
+    }
+
+    const route = await prisma.busRoute.create({
+      data: {
+        routeName,
+        busId,
+        status,
+        managedBy: session.user.id,
+        schoolId: session.user.schoolId!
+      },
+      include: {
+        bus: {
+          select: {
+            id: true,
+            busNumber: true,
+            busName: true,
+            driverName: true,
+            capacity: true
+          }
+        },
+        manager: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+          students: {
+            select: {
+              id: true,
+              studentId: true,
+              name: true,
+              class: {
+                select: {
+                  className: true,
+                  classCode: true
+                }
+              }
+            }
+          }
+      }
+    });
+
+    return NextResponse.json({
+      message: 'Bus route created successfully',
+      route
+    });
+
   } catch (error) {
-    console.error('Error updating route status:', error);
+    console.error('Error creating bus route:', error);
     return NextResponse.json(
-      { error: 'Failed to update route status' },
+      { error: 'Failed to create bus route' },
       { status: 500 }
     );
   }

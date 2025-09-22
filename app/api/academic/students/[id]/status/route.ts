@@ -52,6 +52,9 @@ export async function PUT(
         },
         busRoute: {
           select: { routeName: true, id: true }
+        },
+        class: {
+          select: { className: true, classCode: true }
         }
       }
     })
@@ -65,7 +68,7 @@ export async function PUT(
       student: {
         id: updatedStudent.id,
         name: updatedStudent.name,
-        grade: updatedStudent.grade,
+        grade: updatedStudent.class?.className || 'Unknown',
         status: updatedStudent.status,
         updatedAt: updatedStudent.updatedAt
       }

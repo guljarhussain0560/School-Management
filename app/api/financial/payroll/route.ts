@@ -60,9 +60,13 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      // Generate payroll ID
+      const payrollId = `${department.substring(0, 3).toUpperCase()}${year}${String(month).padStart(2, '0')}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
+
       // Create payroll record using the employee's database id
       const payroll = await prisma.payroll.create({
         data: {
+          payrollId,
           employeeId: employee.id, // Use the database id, not the employeeId string
           employeeName,
           department,
@@ -176,9 +180,13 @@ export async function POST(request: NextRequest) {
           processedBy: session.user.id,
         }
 
+        // Generate payroll ID
+        const payrollId = `${payrollData.department.substring(0, 3).toUpperCase()}${payrollData.year}${String(payrollData.month).padStart(2, '0')}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
+
         // Create payroll record in database
         const payroll = await prisma.payroll.create({
           data: {
+            payrollId,
             employeeId: payrollData.employeeId,
             employeeName: payrollData.name,
             department: payrollData.department,

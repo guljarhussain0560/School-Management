@@ -20,22 +20,34 @@ export async function GET(request: NextRequest) {
         schoolId: session.user.schoolId!,
         status: 'ACCEPTED' // Only get grades from accepted students
       },
-      select: { grade: true },
-      distinct: ['grade'],
-      orderBy: { grade: 'asc' }
+      select: { 
+        class: {
+          select: {
+            className: true
+          }
+        }
+      },
+      distinct: ['classId'],
+      orderBy: { class: { className: 'asc' } }
     })
 
     // Also get unique grades from performance records
     const performanceGrades = await prisma.studentPerformance.findMany({
       where: { schoolId: session.user.schoolId! },
-      select: { grade: true },
-      distinct: ['grade'],
-      orderBy: { grade: 'asc' }
+      select: { 
+        class: {
+          select: {
+            className: true
+          }
+        }
+      },
+      distinct: ['classId'],
+      orderBy: { class: { className: 'asc' } }
     })
 
     // Combine and deduplicate grades
     const allGrades = [...grades, ...performanceGrades]
-      .map(item => item.grade)
+      .map(item => item.class.className)
       .filter((grade, index, self) => self.indexOf(grade) === index)
       .sort()
 

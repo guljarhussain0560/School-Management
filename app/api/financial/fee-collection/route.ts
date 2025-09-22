@@ -71,9 +71,14 @@ export async function GET(request: NextRequest) {
             id: true,
             studentId: true,
             name: true,
-            grade: true,
             rollNumber: true,
-            admissionNumber: true
+            admissionNumber: true,
+            class: {
+              select: {
+                className: true,
+                classCode: true
+              }
+            }
           }
         },
         collector: {
@@ -175,6 +180,14 @@ export async function POST(request: NextRequest) {
           { admissionNumber: studentId }
         ],
         schoolId: session.user.schoolId!
+      },
+      include: {
+        class: {
+          select: {
+            className: true,
+            classCode: true
+          }
+        }
       }
     })
 
@@ -185,9 +198,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Generate fee ID
+    const feeId = `FEE${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
+
     // Create fee collection record
     const feeCollection = await prisma.feeCollection.create({
       data: {
+        feeId,
         studentId: student.id, // Use the actual student ID from database
         amount: parseFloat(amount),
         paymentMode: normalizedPaymentMode,
@@ -207,7 +224,7 @@ export async function POST(request: NextRequest) {
       studentName: student.name,
       studentId: student.studentId,
       admissionNumber: student.admissionNumber,
-      grade: student.grade,
+      grade: student.class?.className || 'Unknown',
       amount: parseFloat(amount),
       paymentMode: normalizedPaymentMode,
       notes,

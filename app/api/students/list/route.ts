@@ -23,9 +23,14 @@ export async function GET(request: NextRequest) {
         id: true,
         studentId: true,
         name: true,
-        grade: true,
         rollNumber: true,
-        admissionNumber: true
+        admissionNumber: true,
+        class: {
+          select: {
+            className: true,
+            classCode: true
+          }
+        }
       },
       orderBy: {
         name: 'asc'

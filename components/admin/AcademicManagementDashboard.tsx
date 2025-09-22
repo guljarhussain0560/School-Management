@@ -19,6 +19,9 @@ import {
 } from 'lucide-react';
 import CurriculumManagement from '@/components/academic/CurriculumManagement';
 import AttendanceManagement from '@/components/academic/AttendanceManagement';
+import AcademicManagement from '@/components/academic/AcademicManagement';
+import ExamManagement from '@/components/academic/ExamManagement';
+import AcademicCalendar from '@/components/academic/AcademicCalendar';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 
@@ -1100,7 +1103,10 @@ export default function AcademicManagementDashboard({ activeSubSection, setActiv
                       onChange={(e) => setPerformanceForm({...performanceForm, remarks: e.target.value})}
                     />
                   </div>
-                  <Button type="submit" disabled={loading}>
+                  <Button 
+                    type="submit" 
+                    disabled={loading || !performanceForm.studentName || !performanceForm.subject || !performanceForm.grade || !performanceForm.marks || !performanceForm.maxMarks || !performanceForm.examDate}
+                  >
                     {loading ? 'Creating...' : 'Create Performance Record'}
                   </Button>
                 </form>
@@ -1488,7 +1494,10 @@ export default function AcademicManagementDashboard({ activeSubSection, setActiv
                     />
                     <p className="text-xs text-gray-500 mt-1">Accepted formats: PDF, DOC, DOCX, TXT, JPG, PNG</p>
                   </div>
-                  <Button type="submit" disabled={loading}>
+                  <Button 
+                    type="submit" 
+                    disabled={loading || !assignmentForm.title || !assignmentForm.subject || !assignmentForm.grade || !assignmentForm.dueDate}
+                  >
                     {loading ? 'Creating...' : 'Create Assignment'}
                   </Button>
                 </form>
@@ -1684,6 +1693,15 @@ export default function AcademicManagementDashboard({ activeSubSection, setActiv
       case 'curriculum':
         return <CurriculumManagement />;
 
+      case 'exams':
+        return <ExamManagement />;
+
+      case 'academic-calendar':
+        return <AcademicCalendar />;
+
+      case 'academic-management':
+        return <AcademicManagement />;
+
       case 'student-onboarding':
         return (
           <div className="space-y-6">
@@ -1806,7 +1824,10 @@ export default function AcademicManagementDashboard({ activeSubSection, setActiv
                       <p className="text-xs text-gray-500 mt-1">Upload birth certificate or other ID proof</p>
                     </div>
                   </div>
-                  <Button type="submit" disabled={loading}>
+                  <Button 
+                    type="submit" 
+                    disabled={loading || !studentForm.fullName || !studentForm.age || !studentForm.address || !studentForm.parentName || !studentForm.contactNumber || !studentForm.emailAddress}
+                  >
                     {loading ? 'Enrolling...' : 'Enroll Student'}
                   </Button>
                 </form>

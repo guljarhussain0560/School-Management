@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { generateUniqueEmployeeId } from '@/lib/employee-utils'
+import { IDService } from '@/lib/id-service'
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,32 +26,14 @@ export async function GET(request: NextRequest) {
     // Calculate pagination
     const skip = (page - 1) * limit
 
-    // Build where clause
-    const where: any = {
-      schoolId: session.user.schoolId
-    }
-
-    // Check if there are any employees for this school
-    const schoolEmployeesCount = await prisma.employee.count({ where: { schoolId: session.user.schoolId } })
+    // Build where clause - handle null schoolId
+    const where: any = {}
     
-    // If no employees found for this school, check if there are employees without schoolId
-    if (schoolEmployeesCount === 0) {
-      const allEmployeesCount = await prisma.employee.count()
-      const employeesWithoutSchoolId = await prisma.employee.count({ where: { schoolId: null } })
-      
-      if (allEmployeesCount > 0 && employeesWithoutSchoolId > 0) {
-        // There are employees but they don't have a schoolId - this is the issue
-        console.log('⚠️ No employees found for schoolId:', session.user.schoolId)
-        console.log('⚠️ But there are', employeesWithoutSchoolId, 'employees without schoolId')
-        
-        // For now, let's include employees without schoolId to show the user what's available
-        // This is a temporary fix - the user should click "Fix School IDs" button
-        where.OR = [
-          { schoolId: session.user.schoolId },
-          { schoolId: null }
-        ]
-        delete where.schoolId
-      }
+    if (session.user.schoolId) {
+      where.schoolId = session.user.schoolId
+    } else {
+      // If user doesn't have a schoolId, show all employees (for admin setup)
+      console.log('⚠️ User has no schoolId, showing all employees')
     }
 
     // Add search filter
@@ -100,19 +82,19 @@ export async function GET(request: NextRequest) {
     // Calculate summary statistics
     const [totalEmployees, activeEmployees, inactiveEmployees, onLeaveEmployees, totalSalary] = await Promise.all([
       prisma.employee.count({
-        where: { schoolId: session.user.schoolId }
+        where: session.user.schoolId ? { schoolId: session.user.schoolId } : {}
       }),
       prisma.employee.count({
-        where: { schoolId: session.user.schoolId, status: 'ACTIVE' }
+        where: session.user.schoolId ? { schoolId: session.user.schoolId, status: 'ACTIVE' } : { status: 'ACTIVE' }
       }),
       prisma.employee.count({
-        where: { schoolId: session.user.schoolId, status: 'INACTIVE' }
+        where: session.user.schoolId ? { schoolId: session.user.schoolId, status: 'INACTIVE' } : { status: 'INACTIVE' }
       }),
       prisma.employee.count({
-        where: { schoolId: session.user.schoolId, status: 'ON_LEAVE' }
+        where: session.user.schoolId ? { schoolId: session.user.schoolId, status: 'ON_LEAVE' } : { status: 'ON_LEAVE' }
       }),
       prisma.employee.aggregate({
-        where: { schoolId: session.user.schoolId, status: 'ACTIVE' },
+        where: session.user.schoolId ? { schoolId: session.user.schoolId, status: 'ACTIVE' } : { status: 'ACTIVE' },
         _sum: { salary: true }
       })
     ])
@@ -202,8 +184,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Initialize ID service with school configuration
+    await IDService.initializeSchool(session.user.schoolId!)
+
+    // Determine role based on department/position
+    let role: 'ADMIN' | 'TEACHER' | 'TRANSPORT' = 'TEACHER'
+    if (department.toLowerCase().includes('admin') || position.toLowerCase().includes('admin')) {
+      role = 'ADMIN'
+    } else if (department.toLowerCase().includes('transport') || position.toLowerCase().includes('transport')) {
+      role = 'TRANSPORT'
+    }
+
     // Generate unique employee ID
-    const employeeId = await generateUniqueEmployeeId()
+    const employeeId = await IDService.generateEmployeeId(role, session.user.schoolId!)
 
     // Create employee record
     const employee = await prisma.employee.create({

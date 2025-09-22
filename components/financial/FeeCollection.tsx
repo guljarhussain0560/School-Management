@@ -4,8 +4,8 @@ import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 const data = [
-  { name: 'Collected', value: 75, color: '#f97316' },
-  { name: 'Pending', value: 25, color: '#fdba74' },
+  { name: 'Collected', value: 75, color: 'bg-orange-500' },
+  { name: 'Pending', value: 25, color: 'bg-orange-300' },
 ];
 
 const FeeCollection = () => {
@@ -24,7 +24,7 @@ const FeeCollection = () => {
               dataKey="value"
             >
               {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
+                <Cell key={`cell-${index}`} fill={index === 0 ? '#f97316' : '#fdba74'} />
               ))}
             </Pie>
           </PieChart>
@@ -34,8 +34,7 @@ const FeeCollection = () => {
         {data.map((entry, index) => (
           <div key={index} className="flex items-center space-x-2">
             <div 
-              className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: entry.color }}
+              className={`w-3 h-3 rounded-full ${entry.color}`}
             />
             <span className="text-sm text-gray-600">{entry.name}: {entry.value}%</span>
           </div>

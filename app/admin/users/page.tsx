@@ -6,23 +6,20 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import AdminNavigation from '@/components/admin/AdminNavigation'
 import UserManagement from '@/components/admin/UserManagement'
 import UsersDashboard from '@/components/admin/UsersDashboard'
-import TeacherAssignments from '@/components/admin/TeacherAssignments'
 import { Button } from '@/components/ui/button'
-import { Shield, ArrowLeft, BarChart3, Users, UserPlus, BookOpen } from 'lucide-react'
+import { Shield, ArrowLeft, BarChart3, Users, UserPlus } from 'lucide-react'
 
 export default function AdminUsersPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [currentView, setCurrentView] = useState<'dashboard' | 'management' | 'assignments'>('dashboard')
+  const [currentView, setCurrentView] = useState<'dashboard' | 'management'>('dashboard')
 
   // Check if we should show management view
   useEffect(() => {
     const view = searchParams.get('view')
     if (view === 'management') {
       setCurrentView('management')
-    } else if (view === 'assignments') {
-      setCurrentView('assignments')
     } else {
       setCurrentView('dashboard')
     }
@@ -60,15 +57,12 @@ export default function AdminUsersPage() {
               <Shield className="h-8 w-8 text-indigo-600" />
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">
-                  {currentView === 'dashboard' ? 'Users Dashboard' : 
-                   currentView === 'management' ? 'User Management' : 'Teacher Assignments'}
+                  {currentView === 'dashboard' ? 'Users Dashboard' : 'User Management'}
                 </h1>
                 <p className="text-gray-600">
                   {currentView === 'dashboard' 
                     ? 'View all users under your administration' 
-                    : currentView === 'management'
-                    ? 'Create, update, and manage teachers and transport staff'
-                    : 'Assign teachers to subjects and grades'
+                    : 'Create, update, and manage teachers and transport staff'
                   }
                 </p>
               </div>
@@ -94,15 +88,6 @@ export default function AdminUsersPage() {
                 >
                   <UserPlus className="h-4 w-4" />
                   Management
-                </Button>
-                <Button
-                  variant={currentView === 'assignments' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setCurrentView('assignments')}
-                  className="flex items-center gap-2"
-                >
-                  <BookOpen className="h-4 w-4" />
-                  Allocate Teacher
                 </Button>
               </div>
               
@@ -130,9 +115,7 @@ export default function AdminUsersPage() {
         </div>
 
         {/* Content */}
-        {currentView === 'dashboard' ? <UsersDashboard /> : 
-         currentView === 'management' ? <UserManagement /> : 
-         <TeacherAssignments />}
+        {currentView === 'dashboard' ? <UsersDashboard /> : <UserManagement />}
       </div>
     </div>
   )

@@ -1,11 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient, AlertType, AlertPriority, AlertStatus } from '@prisma/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 const prisma = new PrismaClient();
 
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const safetyAlerts = await prisma.safetyAlert.findMany({
+      where: {
+        schoolId: session.user.schoolId!
+      },
       orderBy: { createdAt: 'desc' },
       include: {
         creator: {
@@ -29,6 +43,15 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const { type, priority, description } = await request.json();
 
     if (!type || !priority || !description) {
@@ -38,28 +61,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For demo purposes, we'll use the first school and user
-    // In a real app, you'd get these from the authenticated session
-    const school = await prisma.school.findFirst();
-    const user = await prisma.user.findFirst({
-      where: { role: 'TRANSPORT' }
-    });
-
-    if (!school || !user) {
-      return NextResponse.json(
-        { error: 'School or user not found' },
-        { status: 404 }
-      );
-    }
+    // Generate alert ID
+    const alertId = `ALERT${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
 
     const safetyAlert = await prisma.safetyAlert.create({
       data: {
+        alertId,
         type: type.toUpperCase() as AlertType,
         priority: priority.toUpperCase() as AlertPriority,
         description,
         status: AlertStatus.ACTIVE,
-        createdBy: user.id,
-        schoolId: school.id
+        createdBy: session.user.id,
+        schoolId: session.user.schoolId!
       },
       include: {
         creator: {
@@ -86,6 +99,15 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const { alerts } = await request.json();
 
     if (!alerts || !Array.isArray(alerts)) {
@@ -95,10 +117,13 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Update all alerts to synced status
+    // Update all alerts to synced status (only for the current school)
     const updatePromises = alerts.map((alert: any) =>
       prisma.safetyAlert.update({
-        where: { id: alert.id },
+        where: { 
+          id: alert.id,
+          schoolId: session.user.schoolId! // Ensure only school's alerts are updated
+        },
         data: { 
           status: AlertStatus.SYNCED,
           syncedAt: new Date()

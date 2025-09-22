@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { generateUniqueStudentId } from '@/lib/student-utils'
+import { IDService } from '@/lib/id-service'
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,7 +27,9 @@ export async function GET(request: NextRequest) {
     }
 
     if (grade) {
-      where.grade = grade
+      where.class = {
+        classCode: grade
+      }
     }
 
     // Get students with pagination
@@ -39,7 +41,12 @@ export async function GET(request: NextRequest) {
           studentId: true,
           name: true,
           age: true,
-          grade: true,
+          class: {
+            select: {
+              classCode: true,
+              className: true
+            }
+          },
           rollNumber: true,
           admissionNumber: true,
           parentContact: true,
@@ -193,9 +200,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate unique student ID, roll number and admission number if not provided
-    const finalStudentId = await generateUniqueStudentId()
-    const finalRollNumber = rollNumber || `RN${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
+    // Initialize ID service with school configuration
+    await IDService.initializeSchool(session.user.schoolId!)
+
+    // Get batch and class information
+    const classInfo = await prisma.class.findUnique({
+      where: { classCode: grade },
+      include: { batch: true }
+    })
+
+    if (!classInfo) {
+      return NextResponse.json(
+        { error: 'Invalid class code provided' },
+        { status: 400 }
+      )
+    }
+
+    // Generate unique student ID and roll number
+    const finalStudentId = await IDService.generateStudentId(classInfo.batch.batchCode, session.user.schoolId!)
+    const finalRollNumber = await IDService.generateRollNumber(classInfo.classCode, classInfo.batch.academicYear, session.user.schoolId!)
     const finalAdmissionNumber = admissionNumber || `ADM${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
 
     // Validate bus route ID if provided
@@ -221,7 +244,7 @@ export async function POST(request: NextRequest) {
       name,
       email,
       age: parseInt(age),
-      grade,
+      classId: classInfo.id,
       rollNumber: finalRollNumber,
       parentContact,
       address,
@@ -253,7 +276,8 @@ export async function POST(request: NextRequest) {
       previousSchool,
       previousGrade,
       admissionNumber: finalAdmissionNumber,
-      academicYear,
+      academicYear: classInfo.batch.academicYear,
+      batchId: classInfo.batch.id,
       
       // Medical Information
       medicalConditions,
@@ -287,7 +311,12 @@ export async function POST(request: NextRequest) {
 
     // Create student
     const student = await prisma.student.create({
-      data: studentCreateData
+      data: studentCreateData,
+      include: {
+        class: {
+          select: { className: true, classCode: true }
+        }
+      }
     })
 
     return NextResponse.json({
@@ -296,7 +325,7 @@ export async function POST(request: NextRequest) {
         id: student.id,
         studentId: student.studentId,
         name: student.name,
-        grade: student.grade,
+        grade: student.class?.className || 'Unknown',
         rollNumber: student.rollNumber,
         admissionNumber: student.admissionNumber,
         enrolledDate: student.createdAt.toISOString().split('T')[0],

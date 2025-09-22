@@ -108,9 +108,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Generate log ID
+    const logId = `LOG${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+
     // Create maintenance log
     const log = await prisma.maintenanceLog.create({
       data: {
+        logId,
         facility,
         status,
         notes: notes || null,

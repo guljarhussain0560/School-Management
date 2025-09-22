@@ -34,7 +34,12 @@ export async function GET(request: NextRequest) {
     }
 
     if (grade) {
-      where.grade = grade
+      where.class = {
+        className: {
+          contains: `Class ${grade}`,
+          mode: 'insensitive'
+        }
+      }
     }
 
     const students = await prisma.student.findMany({
@@ -43,9 +48,14 @@ export async function GET(request: NextRequest) {
         id: true,
         studentId: true,
         name: true,
-        grade: true,
         rollNumber: true,
-        admissionNumber: true
+        admissionNumber: true,
+        class: {
+          select: {
+            className: true,
+            classCode: true
+          }
+        }
       },
       orderBy: {
         name: 'asc'

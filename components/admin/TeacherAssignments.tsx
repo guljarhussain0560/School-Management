@@ -15,12 +15,22 @@ import { toast } from 'sonner'
 interface TeacherAssignment {
   id: string
   teacherId: string
-  subject: string
-  grade: string
+  subjectId: string
+  classId: string
   teacher: {
     id: string
     name: string
     email: string
+  }
+  subject: {
+    id: string
+    subjectName: string
+    subjectCode: string
+  }
+  class: {
+    id: string
+    className: string
+    classCode: string
   }
 }
 
@@ -33,8 +43,8 @@ interface Teacher {
 
 interface AssignmentFormData {
   teacherId: string
-  subject: string
-  grade: string
+  subjectId: string
+  classId: string
 }
 
 export default function TeacherAssignments() {
@@ -43,25 +53,21 @@ export default function TeacherAssignments() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [subjectFilter, setSubjectFilter] = useState<string>('all')
-  const [gradeFilter, setGradeFilter] = useState<string>('all')
+  const [classFilter, setClassFilter] = useState<string>('all')
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [formData, setFormData] = useState<AssignmentFormData>({
     teacherId: '',
-    subject: '',
-    grade: ''
+    subjectId: '',
+    classId: ''
   })
-
-  const subjects = [
-    'Mathematics', 'Science', 'English', 'History', 'Geography',
-    'Physics', 'Chemistry', 'Biology', 'Computer Science', 'Art',
-    'Music', 'Physical Education', 'Social Studies', 'Economics'
-  ]
-
-  const grades = Array.from({length: 12}, (_, i) => (i + 1).toString())
+  const [subjects, setSubjects] = useState([])
+  const [classes, setClasses] = useState([])
 
   useEffect(() => {
     fetchAssignments()
     fetchTeachers()
+    fetchSubjects()
+    fetchClasses()
   }, [])
 
   const fetchAssignments = async () => {
@@ -94,6 +100,30 @@ export default function TeacherAssignments() {
     }
   }
 
+  const fetchSubjects = async () => {
+    try {
+      const response = await fetch('/api/academic/subjects')
+      if (response.ok) {
+        const data = await response.json()
+        setSubjects(data.subjects || [])
+      }
+    } catch (error) {
+      console.error('Error fetching subjects:', error)
+    }
+  }
+
+  const fetchClasses = async () => {
+    try {
+      const response = await fetch('/api/academic/classes')
+      if (response.ok) {
+        const data = await response.json()
+        setClasses(data.classes || [])
+      }
+    } catch (error) {
+      console.error('Error fetching classes:', error)
+    }
+  }
+
   const handleCreateAssignment = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -107,7 +137,7 @@ export default function TeacherAssignments() {
 
       if (response.ok) {
         toast.success('Teacher assignment created successfully')
-        setFormData({ teacherId: '', subject: '', grade: '' })
+        setFormData({ teacherId: '', subjectId: '', classId: '' })
         setIsCreateDialogOpen(false)
         fetchAssignments()
       } else {
@@ -142,12 +172,12 @@ export default function TeacherAssignments() {
 
   const filteredAssignments = assignments.filter(assignment => {
     const matchesSearch = assignment.teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         assignment.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         assignment.grade.includes(searchTerm)
-    const matchesSubject = subjectFilter === 'all' || assignment.subject === subjectFilter
-    const matchesGrade = gradeFilter === 'all' || assignment.grade === gradeFilter
+                         assignment.subject.subjectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         assignment.class.className.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSubject = subjectFilter === 'all' || assignment.subject.id === subjectFilter
+    const matchesClass = classFilter === 'all' || assignment.class.id === classFilter
 
-    return matchesSearch && matchesSubject && matchesGrade
+    return matchesSearch && matchesSubject && matchesClass
   })
 
   if (loading && assignments.length === 0) {
@@ -207,34 +237,34 @@ export default function TeacherAssignments() {
                 <div>
                   <label className="block text-sm font-medium mb-1">Subject</label>
                   <Select
-                    value={formData.subject}
-                    onValueChange={(value) => setFormData({ ...formData, subject: value })}
+                    value={formData.subjectId}
+                    onValueChange={(value) => setFormData({ ...formData, subjectId: value })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select subject" />
                     </SelectTrigger>
                     <SelectContent>
-                      {subjects.map((subject) => (
-                        <SelectItem key={subject} value={subject}>
-                          {subject}
+                      {subjects.map((subject: any) => (
+                        <SelectItem key={subject.id} value={subject.id}>
+                          {subject.subjectName}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Grade</label>
+                  <label className="block text-sm font-medium mb-1">Class</label>
                   <Select
-                    value={formData.grade}
-                    onValueChange={(value) => setFormData({ ...formData, grade: value })}
+                    value={formData.classId}
+                    onValueChange={(value) => setFormData({ ...formData, classId: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select grade" />
+                      <SelectValue placeholder="Select class" />
                     </SelectTrigger>
                     <SelectContent>
-                      {grades.map((grade) => (
-                        <SelectItem key={grade} value={grade}>
-                          Grade {grade}
+                      {classes.map((classItem: any) => (
+                        <SelectItem key={classItem.id} value={classItem.id}>
+                          {classItem.className}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -273,22 +303,22 @@ export default function TeacherAssignments() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Subjects</SelectItem>
-              {subjects.map((subject) => (
-                <SelectItem key={subject} value={subject}>
-                  {subject}
+              {subjects.map((subject: any) => (
+                <SelectItem key={subject.id} value={subject.id}>
+                  {subject.subjectName}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Select value={gradeFilter} onValueChange={setGradeFilter}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="Filter by grade" />
+          <Select value={classFilter} onValueChange={setClassFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Filter by class" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Grades</SelectItem>
-              {grades.map((grade) => (
-                <SelectItem key={grade} value={grade}>
-                  Grade {grade}
+              <SelectItem value="all">All Classes</SelectItem>
+              {classes.map((classItem: any) => (
+                <SelectItem key={classItem.id} value={classItem.id}>
+                  {classItem.className}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -302,7 +332,7 @@ export default function TeacherAssignments() {
               <TableRow>
                 <TableHead>Teacher</TableHead>
                 <TableHead>Subject</TableHead>
-                <TableHead>Grade</TableHead>
+                <TableHead>Class</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -321,10 +351,10 @@ export default function TeacherAssignments() {
                       {assignment.teacher.name}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{assignment.subject}</Badge>
+                      <Badge variant="outline">{assignment.subject.subjectName}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">Grade {assignment.grade}</Badge>
+                      <Badge variant="secondary">{assignment.class.className}</Badge>
                     </TableCell>
                     <TableCell>{assignment.teacher.email}</TableCell>
                     <TableCell className="text-right">
@@ -338,7 +368,7 @@ export default function TeacherAssignments() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Delete Teacher Assignment</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to remove {assignment.teacher.name} from teaching {assignment.subject} in Grade {assignment.grade}? This action cannot be undone.
+                              Are you sure you want to remove {assignment.teacher.name} from teaching {assignment.subject.subjectName} in {assignment.class.className}? This action cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>

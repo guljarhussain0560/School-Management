@@ -24,11 +24,21 @@ export async function GET(request: NextRequest) {
     }
 
     if (grade) {
-      where.grade = grade
+      where.class = {
+        className: {
+          contains: `Class ${grade}`,
+          mode: 'insensitive'
+        }
+      }
     }
 
     if (subject) {
-      where.subject = subject
+      where.subject = {
+        subjectName: {
+          contains: subject,
+          mode: 'insensitive'
+        }
+      }
     }
 
     const progress = await prisma.curriculumProgress.findMany({
@@ -43,8 +53,8 @@ export async function GET(request: NextRequest) {
         }
       },
       orderBy: [
-        { subject: 'asc' },
-        { grade: 'asc' },
+        { subject: { subjectName: 'asc' } },
+        { class: { className: 'asc' } },
         { module: 'asc' }
       ]
     })
@@ -92,14 +102,48 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Find subject and class
+    const subjectRecord = await prisma.subject.findFirst({
+      where: {
+        subjectName: {
+          contains: subject,
+          mode: 'insensitive'
+        },
+        schoolId: session.user.schoolId!
+      }
+    });
+
+    const classRecord = await prisma.class.findFirst({
+      where: {
+        className: {
+          contains: `Class ${grade}`,
+          mode: 'insensitive'
+        },
+        schoolId: session.user.schoolId!
+      }
+    });
+
+    if (!subjectRecord) {
+      return NextResponse.json(
+        { error: `Subject '${subject}' not found` },
+        { status: 400 }
+      );
+    }
+
+    if (!classRecord) {
+      return NextResponse.json(
+        { error: `Class '${grade}' not found` },
+        { status: 400 }
+      );
+    }
+
     // Upsert curriculum progress
     const curriculumProgress = await prisma.curriculumProgress.upsert({
       where: {
-        subject_grade_module_schoolId: {
-          subject,
-          grade,
-          module,
-          schoolId: session.user.schoolId!
+        subjectId_classId_module: {
+          subjectId: subjectRecord.id,
+          classId: classRecord.id,
+          module
         }
       },
       update: {
@@ -107,8 +151,8 @@ export async function POST(request: NextRequest) {
         updatedBy: session.user.id
       },
       create: {
-        subject,
-        grade,
+        subjectId: subjectRecord.id,
+        classId: classRecord.id,
         module,
         progress: progressValue,
         schoolId: session.user.schoolId!,

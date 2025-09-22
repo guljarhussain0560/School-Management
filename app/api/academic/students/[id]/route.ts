@@ -31,6 +31,9 @@ export async function GET(
         },
         school: {
           select: { name: true, id: true }
+        },
+        class: {
+          select: { className: true, classCode: true }
         }
       }
     })
@@ -45,7 +48,7 @@ export async function GET(
       name: student.name,
       email: student.email,
       age: student.age,
-      grade: student.grade,
+      grade: student.class?.className || 'Unknown',
       rollNumber: student.rollNumber,
       parentContact: student.parentContact,
       address: student.address,

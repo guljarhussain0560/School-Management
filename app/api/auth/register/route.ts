@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { generateSchoolId } from '@/lib/school-id-generator'
 import { hashPassword, validateEmail } from '@/lib/utils'
 import { UserRole } from '@prisma/client'
 
@@ -57,9 +58,18 @@ export async function POST(request: NextRequest) {
         }
       })
 
+      // Generate school code from name
+      const schoolCode = (schoolName || name)
+        .replace(/[^a-zA-Z]/g, '')
+        .substring(0, 3)
+        .toUpperCase()
+        .padEnd(3, 'X');
+
       // Then create the school with the admin reference
       const school = await tx.school.create({
         data: {
+          schoolId: generateSchoolId(schoolName || name, schoolRegNo || `SCH-${Date.now()}`),
+          schoolCode,
           name: schoolName || name,
           registrationNumber: schoolRegNo || `SCH-${Date.now()}`,
           phone: phone,

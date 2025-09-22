@@ -16,10 +16,6 @@ export default function LoginPage() {
         <div className="mt-3 text-center text-sm">
           New here? <a href="/signup" className="underline">Create an account</a>
         </div>
-        <div className="mt-4 flex gap-2">
-          <a href="/home" className="flex-1 rounded-md bg-gray-100 px-3 py-2 text-center text-sm hover:bg-gray-200">Dashboard</a>
-          <a href="/input-portal" className="flex-1 rounded-md bg-gray-100 px-3 py-2 text-center text-sm hover:bg-gray-200">Input Portal</a>
-        </div>
       </div>
     </div>
   );

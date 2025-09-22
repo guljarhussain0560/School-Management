@@ -30,7 +30,12 @@ export async function GET(request: NextRequest) {
     }
 
     if (grade) {
-      where.grade = grade
+      where.class = {
+        className: {
+          contains: grade,
+          mode: 'insensitive'
+        }
+      }
     }
 
     if (subject) {
@@ -63,7 +68,12 @@ export async function GET(request: NextRequest) {
               id: true,
               studentId: true,
               name: true,
-              grade: true,
+              class: {
+                select: {
+                  className: true,
+                  classCode: true
+                }
+              },
               rollNumber: true
             }
           },
@@ -85,14 +95,14 @@ export async function GET(request: NextRequest) {
     // Get unique subjects for dropdown
     const subjects = await prisma.studentPerformance.findMany({
       where: { schoolId: session.user.schoolId! },
-      select: { subject: true },
-      distinct: ['subject'],
-      orderBy: { subject: 'asc' }
+      select: { subjectId: true },
+      distinct: ['subjectId'],
+      orderBy: { subjectId: 'asc' }
     })
 
     return NextResponse.json({
       performances,
-      subjects: subjects.map(s => s.subject),
+      subjects: subjects.map(s => s.subjectId),
       pagination: {
         page,
         limit,
@@ -187,12 +197,44 @@ export async function POST(request: NextRequest) {
           continue
         }
 
+        // Find subject
+        const subjectRecord = await prisma.subject.findFirst({
+          where: {
+            subjectName: {
+              contains: subject,
+              mode: 'insensitive'
+            },
+            schoolId: session.user.schoolId!
+          }
+        });
+
+        if (!subjectRecord) {
+          errors.push(`Row ${i + 2}: Subject '${subject}' not found`)
+          continue
+        }
+
+        // Find class
+        const classRecord = await prisma.class.findFirst({
+          where: {
+            className: {
+              contains: grade,
+              mode: 'insensitive'
+            },
+            schoolId: session.user.schoolId!
+          }
+        });
+
+        if (!classRecord) {
+          errors.push(`Row ${i + 2}: Class '${grade}' not found`)
+          continue
+        }
+
         try {
           const performance = await prisma.studentPerformance.create({
             data: {
               studentId: student.id,
-              subject,
-              grade,
+              subjectId: subjectRecord.id,
+              classId: classRecord.id,
               marks: parseFloat(marks),
               maxMarks: parseFloat(maxMarks),
               examType,
@@ -228,6 +270,42 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Find subject
+    const subjectRecord = await prisma.subject.findFirst({
+      where: {
+        subjectName: {
+          contains: subject,
+          mode: 'insensitive'
+        },
+        schoolId: session.user.schoolId!
+      }
+    });
+
+    if (!subjectRecord) {
+      return NextResponse.json(
+        { error: `Subject '${subject}' not found` },
+        { status: 400 }
+      );
+    }
+
+    // Find class
+    const classRecord = await prisma.class.findFirst({
+      where: {
+        className: {
+          contains: grade,
+          mode: 'insensitive'
+        },
+        schoolId: session.user.schoolId!
+      }
+    });
+
+    if (!classRecord) {
+      return NextResponse.json(
+        { error: `Class '${grade}' not found` },
+        { status: 400 }
+      );
+    }
+
     // Check if student exists and belongs to the school
     const student = await prisma.student.findFirst({
       where: {
@@ -251,8 +329,8 @@ export async function POST(request: NextRequest) {
     const performance = await prisma.studentPerformance.create({
       data: {
         studentId,
-        subject,
-        grade,
+        subjectId: subjectRecord.id,
+        classId: classRecord.id,
         marks: parseFloat(marks),
         maxMarks: parseFloat(maxMarks),
         examType: examType || 'Quiz',
@@ -267,7 +345,12 @@ export async function POST(request: NextRequest) {
             id: true,
             studentId: true,
             name: true,
-            grade: true,
+            class: {
+              select: {
+                className: true,
+                classCode: true
+              }
+            },
             rollNumber: true
           }
         }

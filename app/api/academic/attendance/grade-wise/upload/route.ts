@@ -62,10 +62,33 @@ export async function POST(request: NextRequest) {
       errorDetails: [] as string[]
     }
 
+    // Get class information for the grade
+    const classRecord = await prisma.class.findFirst({
+      where: {
+        className: {
+          contains: `Class ${grade}`,
+          mode: 'insensitive'
+        },
+        schoolId: session.user.schoolId!
+      }
+    });
+
+    if (!classRecord) {
+      return NextResponse.json(
+        { error: `No class found for grade ${grade}` },
+        { status: 400 }
+      );
+    }
+
     // Get all students for the grade
     const students = await prisma.student.findMany({
       where: {
-        grade: grade,
+        class: {
+          className: {
+            contains: `Class ${grade}`,
+            mode: 'insensitive'
+          }
+        },
         schoolId: session.user.schoolId!
       },
       select: {
@@ -116,6 +139,7 @@ export async function POST(request: NextRequest) {
           },
           create: {
             studentId: student.id,
+            classId: classRecord.id,
             date: new Date(date),
             isPresent: isPresent,
             schoolId: session.user.schoolId!,

@@ -40,6 +40,7 @@ model Session {
 
 model User {
   id            String    @id @default(cuid())
+  userId        String?   @unique // Generated ID (ADM24001, TCH24001, TRP24001)
   name          String?
   email         String    @unique
   emailVerified DateTime?
@@ -78,6 +79,7 @@ model User {
   
   // Financial data
   collectedFees     FeeCollection[]
+  createdFeeStructures FeeStructure[]
   payrollRecords    Payroll[]
   budgetExpenses    BudgetExpense[]
   
@@ -85,6 +87,17 @@ model User {
   managedRoutes     BusRoute[]
   reportedMaintenance MaintenanceLog[]
   createdAlerts     SafetyAlert[]
+  
+  // Student batch management
+  createdBatches    StudentBatch[] @relation("BatchCreator")
+  
+  // Academic management
+  createdClasses    Class[]
+  createdSubjects   Subject[]
+  createdExams      Exam[]
+  createdExamResults ExamResult[]
+  createdCalendarEvents AcademicCalendar[]
+  createdAcademicEvents AcademicEvent[]
   
   // School admin relation
   adminSchool       School?   @relation("SchoolAdmin")
@@ -100,6 +113,8 @@ model VerificationToken {
 
 model School {
   id                 String   @id @default(cuid())
+  schoolId           String   @unique // Generated school ID (SCH + 9 chars = 12 total)
+  schoolCode         String   @unique // Generated school code (ABC, XYZ, etc.)
   name               String
   registrationNumber String   @unique
   address            String?
@@ -113,11 +128,22 @@ model School {
   admin              User     @relation("SchoolAdmin", fields: [adminId], references: [id])
   users              User[]   @relation("SchoolUsers")
   students           Student[]
+  studentBatches     StudentBatch[]
+  classes            Class[]
+  subjects           Subject[]
+  subjectGrades      SubjectGrade[]
+  academicCalendar   AcademicCalendar[]
+  academicEvents     AcademicEvent[]
+  exams              Exam[]
+  examSchedules      ExamSchedule[]
+  examResults        ExamResult[]
+  buses              Bus[]
   busRoutes          BusRoute[]
   maintenanceItems   MaintenanceItem[]
   maintenanceLogs    MaintenanceLog[]
   safetyAlerts       SafetyAlert[]
   feeCollections     FeeCollection[]
+  feeStructures      FeeStructure[]
   assignments        Assignment[]
   employees          Employee[]
   payrolls           Payroll[]
@@ -127,18 +153,228 @@ model School {
   curriculumProgress CurriculumProgress[]
 }
 
+model StudentBatch {
+  id           String   @id @default(cuid())
+  batchCode    String   @unique // Generated batch code (24A, 24B, etc.)
+  batchName    String   // e.g., "2024-25", "Batch A", "Spring 2024"
+  academicYear String   // e.g., "2024-25"
+  startDate    DateTime
+  endDate      DateTime?
+  description  String?
+  status       BatchStatus @default(ACTIVE)
+  schoolId     String
+  createdBy    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  school       School   @relation(fields: [schoolId], references: [id])
+  creator      User     @relation("BatchCreator", fields: [createdBy], references: [id])
+  students     Student[]
+  classes      Class[]
+  feeStructures FeeStructure[]
+}
+
+model Class {
+  id           String   @id @default(cuid())
+  classCode    String   @unique // Generated class code (A5A, B10B, CNUR)
+  className    String   // e.g., "Class 1", "Grade 10", "Nursery"
+  description  String?
+  capacity     Int      @default(30)
+  isActive     Boolean  @default(true)
+  batchId      String
+  schoolId     String
+  createdBy    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  batch        StudentBatch @relation(fields: [batchId], references: [id])
+  school       School       @relation(fields: [schoolId], references: [id])
+  creator      User         @relation(fields: [createdBy], references: [id])
+  students     Student[]
+  subjects     SubjectGrade[]
+  exams        Exam[]
+  attendance   Attendance[]
+  assignments  Assignment[]
+  performances StudentPerformance[]
+  curriculum   CurriculumProgress[]
+  teacherAssignments TeacherAssignment[]
+  feeStructures FeeStructure[]
+  
+  @@unique([classCode, schoolId])
+}
+
+model Subject {
+  id          String   @id @default(cuid())
+  subjectCode String   @unique // Generated subject code (CMATH01, LENG01, PSCI01)
+  subjectName String   // e.g., "Mathematics", "English", "Science"
+  description String?
+  isActive    Boolean  @default(true)
+  schoolId    String
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  school      School         @relation(fields: [schoolId], references: [id])
+  creator     User           @relation(fields: [createdBy], references: [id])
+  classGrades SubjectGrade[]
+  exams       Exam[]
+  assignments Assignment[]
+  performances StudentPerformance[]
+  curriculum  CurriculumProgress[]
+  teacherAssignments TeacherAssignment[]
+  
+}
+
+model SubjectGrade {
+  id        String   @id @default(cuid())
+  subjectId String
+  classId   String
+  schoolId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  subject   Subject @relation(fields: [subjectId], references: [id])
+  class     Class   @relation(fields: [classId], references: [id])
+  school    School  @relation(fields: [schoolId], references: [id])
+  
+  @@unique([subjectId, classId])
+}
+
+model AcademicCalendar {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  eventType   CalendarEventType
+  startDate   DateTime
+  endDate     DateTime?
+  isAllDay    Boolean  @default(false)
+  isRecurring Boolean  @default(false)
+  recurringPattern String? // "DAILY", "WEEKLY", "MONTHLY", "YEARLY"
+  location    String?
+  attendees   String?  // JSON array of user IDs or "ALL"
+  isActive    Boolean  @default(true)
+  schoolId    String
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  school      School @relation(fields: [schoolId], references: [id])
+  creator     User   @relation(fields: [createdBy], references: [id])
+  
+  @@index([startDate, endDate])
+}
+
+model AcademicEvent {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  eventType   String
+  startDate   DateTime
+  endDate     DateTime?
+  startTime   String?
+  endTime     String?
+  venue       String?
+  isAllDay    Boolean  @default(false)
+  isRecurring Boolean  @default(false)
+  recurringPattern String?
+  targetAudience String[]
+  schoolId    String
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  school      School   @relation(fields: [schoolId], references: [id])
+  creator     User     @relation(fields: [createdBy], references: [id])
+}
+
+model Exam {
+  id          String   @id @default(cuid())
+  examName    String
+  examType    ExamType
+  subjectId   String
+  classId     String
+  totalMarks  Float
+  passingMarks Float
+  duration    Int      // in minutes
+  instructions String?
+  isActive    Boolean  @default(true)
+  schoolId    String
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  subject     Subject      @relation(fields: [subjectId], references: [id])
+  class       Class        @relation(fields: [classId], references: [id])
+  school      School       @relation(fields: [schoolId], references: [id])
+  creator     User         @relation(fields: [createdBy], references: [id])
+  schedules   ExamSchedule[]
+  results     ExamResult[]
+  
+  @@unique([examName, subjectId, classId])
+}
+
+model ExamSchedule {
+  id          String   @id @default(cuid())
+  examId      String
+  examDate    DateTime
+  startTime   DateTime
+  endTime     DateTime
+  venue       String?
+  supervisor  String?  // User ID
+  isActive    Boolean  @default(true)
+  schoolId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  exam        Exam    @relation(fields: [examId], references: [id])
+  school      School  @relation(fields: [schoolId], references: [id])
+  
+  @@unique([examId, examDate])
+}
+
+model ExamResult {
+  id          String   @id @default(cuid())
+  examId      String
+  studentId   String
+  marksObtained Float
+  grade       String?  // A+, A, B+, B, C+, C, D, F
+  remarks     String?
+  isPassed    Boolean
+  schoolId    String
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  exam        Exam    @relation(fields: [examId], references: [id])
+  student     Student @relation(fields: [studentId], references: [id])
+  school      School  @relation(fields: [schoolId], references: [id])
+  creator     User    @relation(fields: [createdBy], references: [id])
+  
+  @@unique([examId, studentId])
+}
+
 model Student {
   id           String   @id @default(cuid())
-  studentId    String   @unique
+  studentId    String   @unique // Generated student ID (ABC24A001, ABC24B001)
   name         String
   email        String?
   age          Int
-  grade        String
-  rollNumber   String
+  classId      String   // Reference to Class instead of grade string
+  rollNumber   String   @unique // Generated roll number (A5A24001, B10B24015)
   parentContact String?
   address      String?
   idProofUrl   String?
   busRouteId   String?
+  batchId      String?  // Reference to StudentBatch
   schoolId     String
   createdBy    String
   createdAt    DateTime @default(now())
@@ -163,6 +399,7 @@ model Student {
   // Address Information
   permanentAddress   String?
   temporaryAddress   String?
+  pickupAddress      String?
   city               String?
   state              String?
   pincode            String?
@@ -183,7 +420,6 @@ model Student {
   
   // Transport Information
   transportRequired  Boolean @default(false)
-  pickupAddress      String?
   dropAddress        String?
   
   // Documents (JSON field to store multiple documents)
@@ -196,33 +432,38 @@ model Student {
   school       School       @relation(fields: [schoolId], references: [id])
   creator      User         @relation(fields: [createdBy], references: [id])
   busRoute     BusRoute?    @relation(fields: [busRouteId], references: [id])
+  batch        StudentBatch? @relation(fields: [batchId], references: [id])
+  class        Class        @relation(fields: [classId], references: [id])
   attendance   Attendance[]
   feePayments  FeeCollection[]
   assignments  StudentAssignment[]
   performances StudentPerformance[]
+  examResults  ExamResult[]
 }
 
 model TeacherAssignment {
   id        String   @id @default(cuid())
   teacherId String
-  subject   String
-  grade     String
+  subjectId String
+  classId   String
   schoolId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
   // Relations
-  teacher   User   @relation(fields: [teacherId], references: [id])
-  school    School @relation(fields: [schoolId], references: [id])
+  teacher   User    @relation(fields: [teacherId], references: [id])
+  subject   Subject @relation(fields: [subjectId], references: [id])
+  class     Class   @relation(fields: [classId], references: [id])
+  school    School  @relation(fields: [schoolId], references: [id])
   
-  @@unique([teacherId, subject, grade, schoolId])
+  @@unique([teacherId, subjectId, classId])
 }
 
 model StudentPerformance {
   id          String   @id @default(cuid())
   studentId   String
-  subject     String
-  grade       String
+  subjectId   String
+  classId     String
   marks       Float
   maxMarks    Float
   examType    String?  // "Quiz", "Test", "Exam", "Assignment"
@@ -235,14 +476,16 @@ model StudentPerformance {
   
   // Relations
   student     Student @relation(fields: [studentId], references: [id])
+  subject     Subject @relation(fields: [subjectId], references: [id])
+  class       Class   @relation(fields: [classId], references: [id])
   school      School  @relation(fields: [schoolId], references: [id])
   creator     User    @relation(fields: [createdBy], references: [id])
 }
 
 model CurriculumProgress {
   id          String   @id @default(cuid())
-  subject     String
-  grade       String
+  subjectId   String
+  classId     String
   module      String
   progress    Float    // Percentage 0-100
   schoolId    String
@@ -251,15 +494,18 @@ model CurriculumProgress {
   updatedAt   DateTime @updatedAt
   
   // Relations
-  school      School @relation(fields: [schoolId], references: [id])
-  updater     User   @relation(fields: [updatedBy], references: [id])
+  subject     Subject @relation(fields: [subjectId], references: [id])
+  class       Class   @relation(fields: [classId], references: [id])
+  school      School  @relation(fields: [schoolId], references: [id])
+  updater     User    @relation(fields: [updatedBy], references: [id])
   
-  @@unique([subject, grade, module, schoolId])
+  @@unique([subjectId, classId, module])
 }
 
 model Attendance {
   id        String   @id @default(cuid())
   studentId String
+  classId   String
   date      DateTime
   isPresent Boolean  @default(true)
   markedBy  String
@@ -268,6 +514,7 @@ model Attendance {
   
   // Relations
   student   Student @relation(fields: [studentId], references: [id])
+  class     Class   @relation(fields: [classId], references: [id])
   marker    User    @relation(fields: [markedBy], references: [id])
   school    School  @relation(fields: [schoolId], references: [id])
   
@@ -276,9 +523,10 @@ model Attendance {
 
 model Assignment {
   id          String           @id @default(cuid())
+  assignmentId String          @unique // Generated assignment ID
   title       String
-  subject     String
-  grade       String
+  subjectId   String
+  classId     String
   dueDate     DateTime
   status      AssignmentStatus @default(PENDING)
   description String?
@@ -288,6 +536,8 @@ model Assignment {
   updatedAt   DateTime         @updatedAt
   
   // Relations
+  subject     Subject            @relation(fields: [subjectId], references: [id])
+  class       Class              @relation(fields: [classId], references: [id])
   school      School             @relation(fields: [schoolId], references: [id])
   creator     User               @relation(fields: [createdBy], references: [id])
   students    StudentAssignment[]
@@ -311,18 +561,52 @@ model StudentAssignment {
   @@unique([studentId, assignmentId])
 }
 
+model FeeStructure {
+  id          String   @id @default(cuid())
+  feeCode     String   @unique // Generated fee code (FEE001, FEE002, etc.)
+  name        String   // "Tuition Fee", "Transport Fee", "Library Fee"
+  description String?
+  amount      Decimal  @db.Decimal(10, 2)
+  frequency   FeeFrequency @default(MONTHLY)
+  category    FeeCategory @default(TUITION)
+  isMandatory Boolean  @default(true)
+  isActive    Boolean  @default(true)
+  applicableFrom DateTime @default(now())
+  applicableTo   DateTime?
+  classId     String?  // If null, applies to all classes
+  batchId     String?  // If null, applies to all batches
+  schoolId    String
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  class       Class?   @relation(fields: [classId], references: [id])
+  batch       StudentBatch? @relation(fields: [batchId], references: [id])
+  school      School   @relation(fields: [schoolId], references: [id])
+  creator     User     @relation(fields: [createdBy], references: [id])
+  collections FeeCollection[]
+  
+  @@unique([name, classId, schoolId])
+}
+
 model FeeCollection {
   id          String        @id @default(cuid())
+  feeId       String        @unique // Generated fee collection ID
   studentId   String
+  feeStructureId String?    // Reference to fee structure
   amount      Decimal       @db.Decimal(10, 2)
   paymentMode PaymentMode
   collectedBy String
   date        DateTime      @default(now())
+  dueDate     DateTime?
   receiptUrl  String?
   notes       String?
+  status      FeeStatus     @default(PAID)
   
   // Relations
   student     Student @relation(fields: [studentId], references: [id])
+  feeStructure FeeStructure? @relation(fields: [feeStructureId], references: [id])
   collector   User    @relation(fields: [collectedBy], references: [id])
   school      School  @relation(fields: [schoolId], references: [id])
   schoolId    String
@@ -330,6 +614,7 @@ model FeeCollection {
 
 model Payroll {
   id            String   @id @default(cuid())
+  payrollId     String   @unique // Generated payroll ID
   employeeId    String?
   employeeName  String?
   department    String
@@ -368,10 +653,29 @@ model BudgetExpense {
   creator     User @relation(fields: [createdBy], references: [id])
 }
 
+model Bus {
+  id           String      @id @default(cuid())
+  busNumber    String      @unique // Generated bus number (ABCR01L001, ABCR02M002)
+  busName      String?
+  capacity     Int         @default(50)
+  driverName   String?
+  driverPhone  String?
+  conductorName String?
+  conductorPhone String?
+  status       BusStatus   @default(ACTIVE)
+  schoolId     String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  // Relations
+  school       School      @relation(fields: [schoolId], references: [id])
+  routes       BusRoute[]
+}
+
 model BusRoute {
   id           String      @id @default(cuid())
   routeName    String
-  busNumber    String
+  busId        String
   status       RouteStatus @default(ON_TIME)
   delayReason  String?
   delayMinutes Int?
@@ -382,8 +686,9 @@ model BusRoute {
   updatedAt    DateTime    @updatedAt
   
   // Relations
-  manager      User      @relation(fields: [managedBy], references: [id])
-  school       School    @relation(fields: [schoolId], references: [id])
+  bus          Bus         @relation(fields: [busId], references: [id])
+  manager      User        @relation(fields: [managedBy], references: [id])
+  school       School      @relation(fields: [schoolId], references: [id])
   students     Student[]
 }
 
@@ -405,6 +710,7 @@ model MaintenanceItem {
 
 model MaintenanceLog {
   id          String            @id @default(cuid())
+  logId       String            @unique // Generated maintenance log ID
   facility    String
   status      MaintenanceStatus @default(OK)
   notes       String?
@@ -421,6 +727,7 @@ model MaintenanceLog {
 
 model SafetyAlert {
   id          String        @id @default(cuid())
+  alertId     String        @unique // Generated safety alert ID
   type        AlertType
   priority    AlertPriority @default(MEDIUM)
   description String
@@ -439,7 +746,7 @@ model SafetyAlert {
 
 model Employee {
   id              String        @id @default(cuid())
-  employeeId      String        @unique
+  employeeId      String        @unique // Generated employee ID (ADM24001, TCH24001, TRP24001)
   name            String
   email           String        @unique
   phone           String?
@@ -551,4 +858,64 @@ enum AlertStatus {
   ACTIVE
   RESOLVED
   SYNCED
+}
+
+enum BusStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+  OUT_OF_SERVICE
+}
+
+enum BatchStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum CalendarEventType {
+  HOLIDAY
+  EXAM
+  EVENT
+  MEETING
+  DEADLINE
+  OTHER
+}
+
+enum ExamType {
+  QUIZ
+  TEST
+  MID_TERM
+  FINAL
+  ASSIGNMENT
+  PROJECT
+  PRACTICAL
+  ORAL
+}
+
+enum FeeFrequency {
+  MONTHLY
+  QUARTERLY
+  SEMESTERLY
+  ANNUAL
+  ONE_TIME
+}
+
+enum FeeCategory {
+  TUITION
+  TRANSPORT
+  LIBRARY
+  LABORATORY
+  SPORTS
+  EXAMINATION
+  DEVELOPMENT
+  MISCELLANEOUS
+}
+
+enum FeeStatus {
+  PAID
+  PENDING
+  OVERDUE
+  PARTIAL
+  WAIVED
 }

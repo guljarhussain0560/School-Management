@@ -28,7 +28,12 @@ export async function GET(request: NextRequest) {
     // Get students for the specified grade
     const students = await prisma.student.findMany({
       where: {
-        grade: grade,
+        class: {
+          className: {
+            contains: `Class ${grade}`,
+            mode: 'insensitive'
+          }
+        },
         schoolId: session.user.schoolId!,
         status: 'ACCEPTED' // Only get accepted students
       },
@@ -37,7 +42,12 @@ export async function GET(request: NextRequest) {
         studentId: true,
         name: true,
         rollNumber: true,
-        grade: true
+        class: {
+          select: {
+            className: true,
+            classCode: true
+          }
+        }
       },
       orderBy: {
         rollNumber: 'asc'

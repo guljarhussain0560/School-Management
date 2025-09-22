@@ -37,11 +37,50 @@ export async function POST(request: NextRequest) {
     }
 
     // Create assignment
+    // Find subject and class
+    const subjectRecord = await prisma.subject.findFirst({
+      where: {
+        subjectName: {
+          contains: subject,
+          mode: 'insensitive'
+        },
+        schoolId: session.user.schoolId!
+      }
+    });
+
+    const classRecord = await prisma.class.findFirst({
+      where: {
+        className: {
+          contains: `Class ${grade}`,
+          mode: 'insensitive'
+        },
+        schoolId: session.user.schoolId!
+      }
+    });
+
+    if (!subjectRecord) {
+      return NextResponse.json(
+        { error: `Subject '${subject}' not found` },
+        { status: 400 }
+      );
+    }
+
+    if (!classRecord) {
+      return NextResponse.json(
+        { error: `Class '${grade}' not found` },
+        { status: 400 }
+      );
+    }
+
+    // Generate assignment ID
+    const assignmentId = `ASG${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+
     const assignment = await prisma.assignment.create({
       data: {
+        assignmentId,
         title,
-        grade,
-        subject,
+        subjectId: subjectRecord.id,
+        classId: classRecord.id,
         dueDate: dueDateObj,
         description: description || null,
         schoolId: session.user.schoolId ?? '', 
@@ -109,11 +148,21 @@ export async function GET(request: NextRequest) {
     }
 
     if (grade) {
-      where.grade = grade
+      where.class = {
+        className: {
+          contains: grade,
+          mode: 'insensitive'
+        }
+      }
     }
 
     if (subject) {
-      where.subject = subject
+      where.subject = {
+        subjectName: {
+          contains: subject,
+          mode: 'insensitive'
+        }
+      }
     }
 
     if (status) {

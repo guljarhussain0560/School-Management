@@ -91,12 +91,28 @@ export async function POST(request: NextRequest) {
           }
         })
 
+        // Find class based on grade level
+        const gradeLevel = row['Grade'].toString().trim();
+        const classRecord = await prisma.class.findFirst({
+          where: {
+            className: {
+              contains: `Class ${gradeLevel}`,
+              mode: 'insensitive'
+            },
+            schoolId: session.user.schoolId!
+          }
+        });
+
+        if (!classRecord) {
+          throw new Error(`No class found for grade level ${gradeLevel}`);
+        }
+
         const studentData = {
           studentId: studentId,
           name: row['Name'].toString().trim(),
           email: row['Email']?.toString().trim() || '',
           age: parseInt(row['Age']),
-          grade: row['Grade'].toString().trim(),
+          classId: classRecord.id,
           rollNumber: row['Roll Number']?.toString().trim() || rollNumber,
           parentContact: row['Parent Contact']?.toString().trim() || '',
           address: row['Address']?.toString().trim() || '',

@@ -41,6 +41,20 @@ export async function GET(request: NextRequest) {
             name: true,
             email: true
           }
+        },
+        subject: {
+          select: {
+            id: true,
+            subjectName: true,
+            subjectCode: true
+          }
+        },
+        class: {
+          select: {
+            id: true,
+            className: true,
+            classCode: true
+          }
         }
       },
       orderBy: {
@@ -80,10 +94,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { teacherId, subject, grade } = body
+    const { teacherId, subjectId, classId } = body
 
     // Validate required fields
-    if (!teacherId || !subject || !grade) {
+    if (!teacherId || !subjectId || !classId) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -110,8 +124,8 @@ export async function POST(request: NextRequest) {
     const existingAssignment = await prisma.teacherAssignment.findFirst({
       where: {
         teacherId,
-        subject,
-        grade,
+        subjectId,
+        classId,
         schoolId: session.user.schoolId!
       }
     })
@@ -126,8 +140,8 @@ export async function POST(request: NextRequest) {
     const assignment = await prisma.teacherAssignment.create({
       data: {
         teacherId,
-        subject,
-        grade,
+        subjectId,
+        classId,
         schoolId: session.user.schoolId!
       },
       include: {
@@ -136,6 +150,20 @@ export async function POST(request: NextRequest) {
             id: true,
             name: true,
             email: true
+          }
+        },
+        subject: {
+          select: {
+            id: true,
+            subjectName: true,
+            subjectCode: true
+          }
+        },
+        class: {
+          select: {
+            id: true,
+            className: true,
+            classCode: true
           }
         }
       }
