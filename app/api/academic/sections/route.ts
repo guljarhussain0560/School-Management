@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
+    const gradeId = searchParams.get('gradeId');
     const batchId = searchParams.get('batchId');
     const search = searchParams.get('search') || '';
 
@@ -28,25 +29,40 @@ export async function GET(request: NextRequest) {
       schoolId: session.user.schoolId!
     };
 
+    if (gradeId && gradeId !== 'all') {
+      where.gradeId = gradeId;
+    }
+
     if (batchId && batchId !== 'all') {
       where.batchId = batchId;
     }
 
     if (search) {
       where.OR = [
-        { gradeName: { contains: search, mode: 'insensitive' } },
-        { gradeCode: { contains: search, mode: 'insensitive' } },
+        { sectionName: { contains: search, mode: 'insensitive' } },
+        { classCode: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } }
       ];
     }
 
-    const [grades, totalCount] = await Promise.all([
-      prisma.grade.findMany({
+    const [sections, totalCount] = await Promise.all([
+      prisma.class.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { gradeLevel: 'asc' },
+        orderBy: [
+          { grade: { gradeLevel: 'asc' } },
+          { sectionName: 'asc' }
+        ],
         include: {
+          grade: {
+            select: {
+              id: true,
+              gradeName: true,
+              gradeCode: true,
+              gradeLevel: true
+            }
+          },
           batch: {
             select: {
               id: true,
@@ -61,34 +77,20 @@ export async function GET(request: NextRequest) {
               email: true
             }
           },
-          sections: {
-            select: {
-              id: true,
-              sectionName: true,
-              sectionType: true,
-              capacity: true,
-              _count: {
-                select: {
-                  students: true
-                }
-              }
-            }
-          },
           _count: {
             select: {
-              sections: true,
-              subjects: true
+              students: true
             }
           }
         }
       }),
-      prisma.grade.count({ where })
+      prisma.class.count({ where })
     ]);
 
     const totalPages = Math.ceil(totalCount / limit);
 
     return NextResponse.json({
-      grades,
+      sections,
       pagination: {
         currentPage: page,
         totalPages,
@@ -98,9 +100,9 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching grades:', error);
+    console.error('Error fetching sections:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch grades' },
+      { error: 'Failed to fetch sections' },
       { status: 500 }
     );
   }
@@ -118,24 +120,39 @@ export async function POST(request: NextRequest) {
     }
 
     const {
-      gradeName,
-      gradeLevel,
+      sectionName,
+      sectionType,
       description,
+      capacity = 30,
+      gradeId,
       batchId
     } = await request.json();
 
-    if (!gradeName || !gradeLevel || !batchId) {
+    if (!sectionName || !sectionType || !gradeId || !batchId) {
       return NextResponse.json(
-        { error: 'Grade name, level, and batch are required' },
+        { error: 'Section name, type, grade, and batch are required' },
         { status: 400 }
       );
     }
 
-    // Get batch information
-    const batch = await prisma.studentBatch.findUnique({
-      where: { id: batchId },
-      select: { batchCode: true }
-    });
+    // Get grade and batch information
+    const [grade, batch] = await Promise.all([
+      prisma.grade.findUnique({
+        where: { id: gradeId },
+        select: { gradeCode: true, gradeName: true }
+      }),
+      prisma.studentBatch.findUnique({
+        where: { id: batchId },
+        select: { batchCode: true }
+      })
+    ]);
+
+    if (!grade) {
+      return NextResponse.json(
+        { error: 'Invalid grade ID' },
+        { status: 400 }
+      );
+    }
 
     if (!batch) {
       return NextResponse.json(
@@ -147,36 +164,51 @@ export async function POST(request: NextRequest) {
     // Initialize ID service with school configuration
     await IDService.initializeSchool(session.user.schoolId!);
 
-    // Generate unique grade code
-    const gradeCode = await IDService.generateGradeCode(gradeLevel, session.user.schoolId!);
+    // Generate unique class code
+    const classCode = await IDService.generateClassCode(
+      batch.batchCode, 
+      grade.gradeCode, 
+      sectionName, 
+      session.user.schoolId!
+    );
 
-    // Check if grade already exists in the same batch
-    const existingGrade = await prisma.grade.findFirst({
+    // Check if section already exists in the same grade
+    const existingSection = await prisma.class.findFirst({
       where: {
-        gradeName,
-        batchId,
+        sectionName,
+        gradeId,
         schoolId: session.user.schoolId!
       }
     });
 
-    if (existingGrade) {
+    if (existingSection) {
       return NextResponse.json(
-        { error: 'Grade already exists in this batch' },
+        { error: 'Section already exists in this grade' },
         { status: 400 }
       );
     }
 
-    const newGrade = await prisma.grade.create({
+    const newSection = await prisma.class.create({
       data: {
-        gradeName,
-        gradeCode,
-        gradeLevel: parseInt(gradeLevel),
+        sectionName,
+        sectionType,
+        classCode,
         description: description || null,
+        capacity,
+        gradeId,
         batchId,
         schoolId: session.user.schoolId!,
         createdBy: session.user.id
       },
       include: {
+        grade: {
+          select: {
+            id: true,
+            gradeName: true,
+            gradeCode: true,
+            gradeLevel: true
+          }
+        },
         batch: {
           select: {
             id: true,
@@ -193,22 +225,21 @@ export async function POST(request: NextRequest) {
         },
         _count: {
           select: {
-            sections: true,
-            subjects: true
+            students: true
           }
         }
       }
     });
 
     return NextResponse.json({
-      message: 'Grade created successfully',
-      grade: newGrade
+      message: 'Section created successfully',
+      section: newSection
     });
 
   } catch (error) {
-    console.error('Error creating grade:', error);
+    console.error('Error creating section:', error);
     return NextResponse.json(
-      { error: 'Failed to create grade' },
+      { error: 'Failed to create section' },
       { status: 500 }
     );
   }

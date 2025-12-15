@@ -7,7 +7,7 @@ export default function Footer() {
         <div>
           <div className="mb-3 flex items-center gap-2">
             <div className="h-8 w-8 rounded-md bg-gradient-to-br from-indigo-600 to-blue-500" />
-            <span className="text-base font-semibold">Tayog School Suite</span>
+            <span className="text-base font-semibold"> School Suite</span>
           </div>
           <p className="text-muted-foreground">Unified platform for school operations and insights. Our mission is to empower schools with delightful, data-driven tools.</p>
           <div className="mt-4 flex items-center gap-3 text-muted-foreground">

@@ -26,6 +26,12 @@ import DashboardOverview from '../dashboard/DashboardOverview';
 import StudentManagement from '../student/StudentManagement';
 import SchoolManagement from '../school/SchoolManagement';
 import BatchManagement from '../academic/BatchManagement';
+import UserManagement from './UserManagement';
+import UsersDashboard from './UsersDashboard';
+import ProfileManagement from './ProfileManagement';
+import AccountSettings from './AccountSettings';
+import SecuritySettings from './SecuritySettings';
+import SystemSettings from './SystemSettings';
 
 export default function AdminManagementDashboard() {
   const router = useRouter();
@@ -68,7 +74,7 @@ export default function AdminManagementDashboard() {
     }
   };
 
-  // Professional Navigation Structure
+  // Logical Workflow Navigation Structure
   const navigationSections = [
     {
       id: 'dashboard',
@@ -80,42 +86,98 @@ export default function AdminManagementDashboard() {
         { id: 'recent-activities', name: 'Recent Activities', icon: Clock }
       ]
     },
+    // Phase 1: Foundation Setup - School First
+    {
+      id: 'school-management',
+      name: 'School Management',
+      icon: School,
+      subSections: [
+        { id: 'school-profile', name: 'School Profile', icon: Globe },
+        { id: 'school-settings', name: 'School Settings', icon: Settings },
+        { id: 'compliance', name: 'Compliance & Reports', icon: CheckCircle },
+        { id: 'system-config', name: 'System Configuration', icon: Database }
+      ]
+    },
+    {
+      id: 'employee',
+      name: 'Employee Management',
+      icon: Briefcase,
+      subSections: [
+        { id: 'employee-management', name: 'Employee Records', icon: Users },
+        { id: 'payroll-integration', name: 'Payroll Integration', icon: Calculator },
+        { id: 'employee-reports', name: 'Employee Reports', icon: FileSpreadsheet }
+      ]
+    },
+    {
+      id: 'user-management',
+      name: 'User Management',
+      icon: Shield,
+      subSections: [
+        { id: 'user-management', name: 'User Management', icon: Shield },
+        { id: 'users-dashboard', name: 'Users Dashboard', icon: Users }
+      ]
+    },
+    {
+      id: 'account-settings',
+      name: 'Account & Settings',
+      icon: Settings,
+      subSections: [
+        { id: 'profile', name: 'Profile Management', icon: Users },
+        { id: 'account-settings', name: 'Account Settings', icon: Settings },
+        { id: 'security', name: 'Security Settings', icon: Shield },
+        { id: 'system-settings', name: 'System Settings', icon: Database }
+      ]
+    },
     {
       id: 'academic',
       name: 'Academic Management',
       icon: GraduationCap,
       subSections: [
+        { id: 'academic-management', name: 'Academic Settings', icon: Settings },
+        { id: 'curriculum', name: 'Curriculum Planning', icon: BookOpen },
         { id: 'performance', name: 'Student Performance', icon: Award },
         { id: 'attendance', name: 'Attendance Tracking', icon: Calendar },
         { id: 'assignments', name: 'Assignment Management', icon: FileText },
-        { id: 'curriculum', name: 'Curriculum Planning', icon: BookOpen },
         { id: 'exams', name: 'Exam Management', icon: ClipboardList },
         { id: 'academic-calendar', name: 'Academic Calendar', icon: Calendar },
-        { id: 'teacher-assignments', name: 'Teacher Assignments', icon: UserCheck },
-        { id: 'academic-management', name: 'Academic Settings', icon: Settings }
+        { id: 'teacher-assignments', name: 'Teacher Assignments', icon: UserCheck }
+      ]
+    },
+    // Phase 2: Academic Structure
+    {
+      id: 'batch-management',
+      name: 'Batch Management',
+      icon: Calendar,
+      subSections: [
+        { id: 'create-batch', name: 'Create Batch', icon: Plus },
+        { id: 'batch-overview', name: 'Batch Overview', icon: BarChart3 },
+        { id: 'assign-students', name: 'Assign Students', icon: UserCheck },
+        { id: 'batch-reports', name: 'Batch Reports', icon: FileSpreadsheet }
       ]
     },
     {
       id: 'student-management',
       name: 'Student Management',
-      icon: Users,
+      icon: School,
       subSections: [
         { id: 'class-management', name: 'Class Management', icon: School },
         { id: 'student-profiles', name: 'Student Profiles', icon: UserCheck },
         { id: 'student-reports', name: 'Student Reports', icon: FileSpreadsheet }
       ]
     },
+    // Phase 3: Student Management
     {
-      id: 'batch-management',
-      name: 'Batch Management',
-      icon: Users,
+      id: 'admissions',
+      name: 'Admissions',
+      icon: UserPlus,
       subSections: [
-        { id: 'batch-overview', name: 'Batch Overview', icon: BarChart3 },
-        { id: 'create-batch', name: 'Create Batch', icon: Plus },
-        { id: 'assign-students', name: 'Assign Students', icon: UserCheck },
-        { id: 'batch-reports', name: 'Batch Reports', icon: FileSpreadsheet }
+        { id: 'student-onboarding', name: 'Student Onboarding', icon: UserPlus },
+        { id: 'batch-upload', name: 'Batch Upload', icon: Upload },
+        { id: 'recent-admissions', name: 'Recent Admissions', icon: Clock },
+        { id: 'admission-reports', name: 'Admission Reports', icon: FileSpreadsheet }
       ]
     },
+    // Phase 4: Financial Management
     {
       id: 'financial',
       name: 'Financial Management',
@@ -129,6 +191,7 @@ export default function AdminManagementDashboard() {
         { id: 'financial-reports', name: 'Financial Reports', icon: LineChart }
       ]
     },
+    // Phase 5: Operations & Transport
     {
       id: 'transport',
       name: 'Transport & Operations',
@@ -142,39 +205,7 @@ export default function AdminManagementDashboard() {
         { id: 'transport-reports', name: 'Transport Reports', icon: FileSpreadsheet }
       ]
     },
-    {
-      id: 'employee',
-      name: 'Employee Management',
-      icon: Briefcase,
-      subSections: [
-        { id: 'employee-management', name: 'Employee Records', icon: Users },
-        { id: 'user-management', name: 'User Management', icon: Shield },
-        { id: 'payroll-integration', name: 'Payroll Integration', icon: Calculator },
-        { id: 'employee-reports', name: 'Employee Reports', icon: FileSpreadsheet }
-      ]
-    },
-    {
-      id: 'admissions',
-      name: 'Admissions',
-      icon: UserPlus,
-      subSections: [
-        { id: 'student-onboarding', name: 'Student Onboarding', icon: UserPlus },
-        { id: 'batch-upload', name: 'Batch Upload', icon: Upload },
-        { id: 'recent-admissions', name: 'Recent Admissions', icon: Clock },
-        { id: 'admission-reports', name: 'Admission Reports', icon: FileSpreadsheet }
-      ]
-    },
-    {
-      id: 'school-management',
-      name: 'School Management',
-      icon: School,
-      subSections: [
-        { id: 'school-profile', name: 'School Profile', icon: Globe },
-        { id: 'school-settings', name: 'School Settings', icon: Settings },
-        { id: 'compliance', name: 'Compliance & Reports', icon: CheckCircle },
-        { id: 'system-config', name: 'System Configuration', icon: Database }
-      ]
-    },
+    // Phase 6: Reports & Analytics
     {
       id: 'reports',
       name: 'Reports & Analytics',
@@ -204,7 +235,12 @@ export default function AdminManagementDashboard() {
         );
         
       case 'student-management':
-        return <StudentManagement />;
+        return (
+          <StudentManagement 
+            activeSubSection={activeSubSection}
+            setActiveSubSection={setActiveSubSection}
+          />
+        );
         
       case 'batch-management':
         return (
@@ -238,6 +274,24 @@ export default function AdminManagementDashboard() {
           />
         );
         
+      case 'user-management':
+        return (
+          <div className="space-y-6">
+            {activeSubSection === 'user-management' && <UserManagement />}
+            {activeSubSection === 'users-dashboard' && <UsersDashboard />}
+          </div>
+        );
+        
+      case 'account-settings':
+        return (
+          <div className="space-y-6">
+            {activeSubSection === 'profile' && <ProfileManagement />}
+            {activeSubSection === 'account-settings' && <AccountSettings />}
+            {activeSubSection === 'security' && <SecuritySettings />}
+            {activeSubSection === 'system-settings' && <SystemSettings />}
+          </div>
+        );
+        
       case 'admissions':
         return (
           <AdmissionsManagementDashboard 
@@ -247,7 +301,12 @@ export default function AdminManagementDashboard() {
         );
         
       case 'school-management':
-        return <SchoolManagement />;
+        return (
+          <SchoolManagement 
+            activeSubSection={activeSubSection}
+            setActiveSubSection={setActiveSubSection}
+          />
+        );
         
       case 'reports':
         return (
@@ -304,10 +363,11 @@ export default function AdminManagementDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="h-screen bg-gray-50 flex overflow-hidden">
       {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-50 ${navigationExpanded ? 'w-64' : 'w-16'} bg-white shadow-lg transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
-        <div className="flex items-center justify-between h-16 px-4 border-b">
+      <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-50 ${navigationExpanded ? 'w-64' : 'w-16'} bg-white shadow-lg transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 flex flex-col`}>
+        {/* Sidebar Header - Fixed */}
+        <div className="flex items-center justify-between h-16 px-4 border-b flex-shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-indigo-600 rounded flex items-center justify-center">
               <span className="text-white font-bold text-sm">SM</span>
@@ -338,7 +398,8 @@ export default function AdminManagementDashboard() {
           </div>
         </div>
         
-        <nav className="mt-4 px-4">
+        {/* Sidebar Navigation - Scrollable */}
+        <nav className="flex-1 overflow-y-auto px-4 py-4">
           {/* Expand/Collapse All Button */}
           {navigationExpanded && (
             <div className="mb-4">
@@ -413,9 +474,9 @@ export default function AdminManagementDashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col transition-all duration-300 ease-in-out">
-        {/* Main Header */}
-        <div className="bg-white px-6 py-6 border-b border-gray-200">
+      <div className="flex-1 flex flex-col transition-all duration-300 ease-in-out overflow-hidden">
+        {/* Main Header - Fixed */}
+        <div className="bg-white px-6 py-6 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button
@@ -442,30 +503,23 @@ export default function AdminManagementDashboard() {
                 </p>
               </div>
             </div>
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="outline"
-                    onClick={() => router.push('/home')}
-                  >
-                    <BarChart3 className="h-4 w-4 mr-2" />
-                    Dashboard
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={() => router.push('/admin/users')}
-                  >
-                    <Users className="h-4 w-4 mr-2" />
-                    Manage Users
-                  </Button>
-                </div>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => router.push('/home')}
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Dashboard
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* Content Area */}
-        <div className="flex-1 p-6">
+        {/* Content Area - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-6">
           {renderContent()}
         </div>
-          </div>
+      </div>
     </div>
   );
 }

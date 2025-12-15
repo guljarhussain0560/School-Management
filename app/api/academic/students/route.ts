@@ -16,9 +16,13 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const grade = searchParams.get('grade')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '50')
+    const search = searchParams.get('search') || ''
+    const batchId = searchParams.get('batchId')
+    const gradeId = searchParams.get('gradeId')
+    const sectionId = searchParams.get('sectionId')
+    const status = searchParams.get('status')
     const skip = (page - 1) * limit
 
     // Build where clause
@@ -26,10 +30,37 @@ export async function GET(request: NextRequest) {
       schoolId: session.user.schoolId
     }
 
-    if (grade) {
+    // Search by text
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { studentId: { contains: search, mode: 'insensitive' } },
+        { rollNumber: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } }
+      ]
+    }
+
+    // Filter by batch
+    if (batchId && batchId !== 'all') {
+      where.batchId = batchId
+    }
+
+    // Filter by grade
+    if (gradeId && gradeId !== 'all') {
       where.class = {
-        classCode: grade
+        ...where.class,
+        gradeId: gradeId
       }
+    }
+
+    // Filter by section
+    if (sectionId && sectionId !== 'all') {
+      where.classId = sectionId
+    }
+
+    // Filter by status
+    if (status && status !== 'all') {
+      where.status = status
     }
 
     // Get students with pagination
@@ -40,14 +71,35 @@ export async function GET(request: NextRequest) {
           id: true,
           studentId: true,
           name: true,
+          email: true,
           age: true,
+          rollNumber: true,
+          parentContact: true,
+          status: true,
+          admissionDate: true,
           class: {
             select: {
+              id: true,
               classCode: true,
-              className: true
+              sectionName: true,
+              sectionType: true,
+              grade: {
+                select: {
+                  id: true,
+                  gradeName: true,
+                  gradeCode: true,
+                  gradeLevel: true
+                }
+              },
+              batch: {
+                select: {
+                  id: true,
+                  batchName: true,
+                  academicYear: true
+                }
+              }
             }
           },
-          rollNumber: true,
           admissionNumber: true,
           parentContact: true,
           address: true,
@@ -182,7 +234,7 @@ export async function POST(request: NextRequest) {
     }
 
     const {
-      name, email, age, grade, rollNumber, parentContact, address, idProofUrl, busRouteId,
+      name, email, age, gradeId, sectionId, rollNumber, parentContact, address, idProofUrl, busRouteId,
       dateOfBirth, gender, bloodGroup, nationality, religion,
       studentPhone, parentName, parentEmail, parentPhone, parentOccupation,
       emergencyContact, emergencyPhone, permanentAddress, temporaryAddress,
@@ -193,9 +245,9 @@ export async function POST(request: NextRequest) {
     } = studentData
 
     // Validation
-    if (!name || !age || !grade || !parentName || !parentEmail || !parentPhone) {
+    if (!name || !age || !sectionId || !parentName || !parentEmail || !parentPhone) {
       return NextResponse.json(
-        { error: 'Name, Age, Grade, Parent Name, Parent Email, and Parent Phone are required' },
+        { error: 'Name, Age, Section, Parent Name, Parent Email, and Parent Phone are required' },
         { status: 400 }
       )
     }
@@ -203,22 +255,31 @@ export async function POST(request: NextRequest) {
     // Initialize ID service with school configuration
     await IDService.initializeSchool(session.user.schoolId!)
 
-    // Get batch and class information
-    const classInfo = await prisma.class.findUnique({
-      where: { classCode: grade },
-      include: { batch: true }
+    // Get section (class) information
+    const sectionInfo = await prisma.class.findFirst({
+      where: { 
+        id: sectionId,
+        schoolId: session.user.schoolId!
+      },
+      include: { 
+        batch: true,
+        grade: true
+      }
     })
 
-    if (!classInfo) {
+    if (!sectionInfo) {
       return NextResponse.json(
-        { error: 'Invalid class code provided' },
+        { error: 'Invalid section provided. Please ensure the section exists in the system.' },
         { status: 400 }
       )
     }
 
+    const batchInfo = sectionInfo.batch
+    const gradeInfo = sectionInfo.grade
+
     // Generate unique student ID and roll number
-    const finalStudentId = await IDService.generateStudentId(classInfo.batch.batchCode, session.user.schoolId!)
-    const finalRollNumber = await IDService.generateRollNumber(classInfo.classCode, classInfo.batch.academicYear, session.user.schoolId!)
+    const finalStudentId = await IDService.generateStudentId(batchInfo.batchCode, session.user.schoolId!)
+    const finalRollNumber = await IDService.generateRollNumber(sectionInfo.classCode, batchInfo.academicYear, session.user.schoolId!)
     const finalAdmissionNumber = admissionNumber || `ADM${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
 
     // Validate bus route ID if provided
@@ -244,7 +305,7 @@ export async function POST(request: NextRequest) {
       name,
       email,
       age: parseInt(age),
-      classId: classInfo.id,
+      classId: sectionInfo.id,
       rollNumber: finalRollNumber,
       parentContact,
       address,
@@ -276,8 +337,8 @@ export async function POST(request: NextRequest) {
       previousSchool,
       previousGrade,
       admissionNumber: finalAdmissionNumber,
-      academicYear: classInfo.batch.academicYear,
-      batchId: classInfo.batch.id,
+      academicYear: batchInfo.academicYear,
+      batchId: batchInfo.id,
       
       // Medical Information
       medicalConditions,

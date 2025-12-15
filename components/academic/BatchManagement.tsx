@@ -14,10 +14,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Plus, Edit, Trash2, Eye, Search, Filter, Download, Upload, Users,
   Calendar, GraduationCap, BookOpen, AlertCircle, CheckCircle, Clock,
-  BarChart3, FileSpreadsheet, UserCheck
+  BarChart3, FileSpreadsheet, UserCheck, Info
 } from 'lucide-react';
 import { toast } from 'sonner';
-import ValidatedForm from '../common/ValidatedForm';
 
 interface StudentBatch {
   id: string;
@@ -27,12 +26,12 @@ interface StudentBatch {
   description?: string;
   startDate: string;
   endDate?: string;
-  isActive: boolean;
   status: string;
   createdAt: string;
   updatedAt: string;
   _count: {
     students: number;
+    classes: number;
   };
   students?: {
     id: string;
@@ -43,21 +42,14 @@ interface StudentBatch {
       classCode: string;
     };
   }[];
-}
-
-interface Student {
-  id: string;
-  studentId: string;
-  name: string;
-  class: {
+  classes?: {
     id: string;
     className: string;
     classCode: string;
-  };
-  batch?: {
-    id: string;
-    batchName: string;
-  };
+    _count: {
+      students: number;
+    };
+  }[];
 }
 
 interface BatchManagementProps {
@@ -70,19 +62,26 @@ const BatchManagement: React.FC<BatchManagementProps> = ({
   setActiveSubSection 
 }) => {
   const [batches, setBatches] = useState<StudentBatch[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<StudentBatch | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showStudentsDialog, setShowStudentsDialog] = useState(false);
-  const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
+  // Form states
+  const [batchForm, setBatchForm] = useState({
+    batchName: '',
+    academicYear: '',
+    startDate: '',
+    endDate: '',
+    description: '',
+    status: 'ACTIVE'
+  });
+
   useEffect(() => {
     fetchBatches();
-    fetchStudents();
   }, []);
 
   const fetchBatches = async () => {
@@ -101,29 +100,32 @@ const BatchManagement: React.FC<BatchManagementProps> = ({
     }
   };
 
-  const fetchStudents = async () => {
-    try {
-      const response = await fetch('/api/students');
-      if (response.ok) {
-        const data = await response.json();
-        setStudents(data.students || []);
-      }
-    } catch (error) {
-      console.error('Error fetching students:', error);
+  const handleCreateBatch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!batchForm.batchName || !batchForm.academicYear || !batchForm.startDate) {
+      toast.error('Please fill in all required fields');
+      return;
     }
-  };
 
-  const handleCreateBatch = async (data: any) => {
     try {
       const response = await fetch('/api/academic/student-batches', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify(batchForm)
       });
 
       if (response.ok) {
         toast.success('Batch created successfully');
         setShowCreateDialog(false);
+        setBatchForm({
+          batchName: '',
+          academicYear: '',
+          startDate: '',
+          endDate: '',
+          description: '',
+          status: 'ACTIVE'
+        });
         fetchBatches();
       } else {
         const error = await response.json();
@@ -135,14 +137,19 @@ const BatchManagement: React.FC<BatchManagementProps> = ({
     }
   };
 
-  const handleUpdateBatch = async (data: any) => {
-    if (!selectedBatch) return;
+  const handleUpdateBatch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedBatch || !batchForm.batchName || !batchForm.academicYear || !batchForm.startDate) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
 
     try {
       const response = await fetch(`/api/academic/student-batches/${selectedBatch.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify(batchForm)
       });
 
       if (response.ok) {
@@ -180,32 +187,30 @@ const BatchManagement: React.FC<BatchManagementProps> = ({
     }
   };
 
-  const handleAssignStudents = async (studentIds: string[]) => {
-    if (!selectedBatch) return;
+  const handleEditBatch = (batch: StudentBatch) => {
+    setSelectedBatch(batch);
+    setBatchForm({
+      batchName: batch.batchName,
+      academicYear: batch.academicYear,
+      startDate: batch.startDate.split('T')[0],
+      endDate: batch.endDate ? batch.endDate.split('T')[0] : '',
+      description: batch.description || '',
+      status: batch.status
+    });
+    setShowEditDialog(true);
+  };
 
+  const handleViewDetails = async (batch: StudentBatch) => {
     try {
-      const response = await fetch('/api/academic/student-batches/assign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          batchId: selectedBatch.id,
-          studentIds
-        })
-      });
-
+      const response = await fetch(`/api/academic/student-batches/${batch.id}`);
       if (response.ok) {
-        toast.success(`${studentIds.length} students assigned to batch successfully`);
-        setShowAssignDialog(false);
-        setSelectedBatch(null);
-        fetchBatches();
-        fetchStudents();
-      } else {
-        const error = await response.json();
-        toast.error(error.error || 'Failed to assign students');
+        const data = await response.json();
+        setSelectedBatch(data.batch);
+        setShowDetailsDialog(true);
       }
     } catch (error) {
-      console.error('Error assigning students:', error);
-      toast.error('Failed to assign students');
+      console.error('Error fetching batch details:', error);
+      toast.error('Failed to fetch batch details');
     }
   };
 
@@ -227,34 +232,16 @@ const BatchManagement: React.FC<BatchManagementProps> = ({
     return matchesSearch && matchesStatus;
   });
 
-  const batchFields = [
-    { name: 'batchName', label: 'Batch Name', type: 'text' as const, required: true, placeholder: 'e.g., Class of 2024' },
-    { name: 'batchCode', label: 'Batch Code', type: 'text' as const, required: true, placeholder: 'e.g., B2024' },
-    { name: 'academicYear', label: 'Academic Year', type: 'text' as const, required: true, placeholder: 'e.g., 2024-25' },
-    { name: 'description', label: 'Description', type: 'textarea' as const, required: false, placeholder: 'Batch description...' },
-    { name: 'startDate', label: 'Start Date', type: 'date' as const, required: true },
-    { name: 'endDate', label: 'End Date', type: 'date' as const, required: false },
-    { name: 'status', label: 'Status', type: 'select' as const, required: true,
-      options: [
-        { value: 'ACTIVE', label: 'Active' },
-        { value: 'INACTIVE', label: 'Inactive' },
-        { value: 'COMPLETED', label: 'Completed' }
-      ]
-    }
-  ];
-
-  const renderContent = () => {
-    switch (activeSubSection) {
-      case 'batch-overview':
-        return renderBatchOverview();
-      case 'create-batch':
-        return renderCreateBatch();
-      case 'assign-students':
-        return renderAssignStudents();
-      case 'batch-reports':
-        return renderBatchReports();
-      default:
-        return renderBatchOverview();
+  const getCurrentAcademicYear = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    
+    // If we're in the second half of the year, it's the start of a new academic year
+    if (month >= 6) {
+      return `${year}-${(year + 1).toString().slice(-2)}`;
+    } else {
+      return `${year - 1}-${year.toString().slice(-2)}`;
     }
   };
 
@@ -263,28 +250,97 @@ const BatchManagement: React.FC<BatchManagementProps> = ({
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-semibold text-gray-900">Batch Overview</h2>
-          <p className="text-gray-600">View and manage all student batches</p>
+          <h2 className="text-2xl font-bold text-gray-900">Batch Management</h2>
+          <p className="text-gray-600">Manage academic year batches and view student distributions</p>
         </div>
-        <Button 
-          className="flex items-center gap-2"
-          onClick={() => setActiveSubSection?.('create-batch')}
-        >
+        <Button onClick={() => setShowCreateDialog(true)} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
-          Create Batch
+          Create New Batch
         </Button>
+      </div>
+
+      {/* Info Alert */}
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          <strong>How Batch Management Works:</strong> Students are automatically assigned to batches during admission based on their admission year. 
+          Each batch represents an academic year (e.g., 2024-25). You can create new batches for upcoming academic years and view student distributions.
+        </AlertDescription>
+      </Alert>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <GraduationCap className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Batches</p>
+                <p className="text-2xl font-bold text-gray-900">{batches.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Active Batches</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {batches.filter(b => b.status === 'ACTIVE').length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Users className="h-6 w-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Students</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {batches.reduce((sum, batch) => sum + batch._count.students, 0)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <BookOpen className="h-6 w-6 text-orange-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Classes</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {batches.reduce((sum, batch) => sum + batch._count.classes, 0)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
-              <Label htmlFor="search">Search</Label>
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  id="search"
                   placeholder="Search batches..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -292,20 +348,17 @@ const BatchManagement: React.FC<BatchManagementProps> = ({
                 />
               </div>
             </div>
-            <div className="min-w-[150px]">
-              <Label htmlFor="status-filter">Status</Label>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="ACTIVE">Active</SelectItem>
-                  <SelectItem value="INACTIVE">Inactive</SelectItem>
-                  <SelectItem value="COMPLETED">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="ACTIVE">Active</SelectItem>
+                <SelectItem value="INACTIVE">Inactive</SelectItem>
+                <SelectItem value="COMPLETED">Completed</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -313,462 +366,380 @@ const BatchManagement: React.FC<BatchManagementProps> = ({
       {/* Batches Table */}
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Batches ({filteredBatches.length})</CardTitle>
-              <CardDescription>All student batches</CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-            </div>
-          </div>
+          <CardTitle>Academic Year Batches</CardTitle>
+          <CardDescription>
+            Manage and view all academic year batches
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Batch Name</TableHead>
-                  <TableHead>Academic Year</TableHead>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>Students</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredBatches.map((batch) => (
-                  <TableRow key={batch.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{batch.batchName}</div>
-                        <div className="text-sm text-gray-500">{batch.batchCode}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{batch.academicYear}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(batch.startDate).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-gray-400" />
-                        <span>{batch._count.students}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(batch.status)}>
-                        {batch.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedBatch(batch);
-                            setShowStudentsDialog(true);
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedBatch(batch);
-                            setShowEditDialog(true);
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedBatch(batch);
-                            setShowAssignDialog(true);
-                          }}
-                        >
-                          <Users className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteBatch(batch.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Batch Name</TableHead>
+                    <TableHead>Academic Year</TableHead>
+                    <TableHead>Batch Code</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Students</TableHead>
+                    <TableHead>Classes</TableHead>
+                    <TableHead>Start Date</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Batch Details Dialog */}
-      <Dialog open={!!selectedBatch && !showEditDialog && !showAssignDialog} onOpenChange={() => setSelectedBatch(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Batch Details</DialogTitle>
-            <DialogDescription>
-              Information for {selectedBatch?.batchName}
-            </DialogDescription>
-          </DialogHeader>
-          {selectedBatch && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <Label>Batch Name</Label>
-                    <p className="text-sm text-gray-600">{selectedBatch.batchName}</p>
-                  </div>
-                  <div>
-                    <Label>Batch Code</Label>
-                    <p className="text-sm text-gray-600">{selectedBatch.batchCode}</p>
-                  </div>
-                  <div>
-                    <Label>Academic Year</Label>
-                    <p className="text-sm text-gray-600">{selectedBatch.academicYear}</p>
-                  </div>
-                  <div>
-                    <Label>Status</Label>
-                    <Badge className={getStatusColor(selectedBatch.status)}>
-                      {selectedBatch.status}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <Label>Start Date</Label>
-                    <p className="text-sm text-gray-600">
-                      {new Date(selectedBatch.startDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div>
-                    <Label>End Date</Label>
-                    <p className="text-sm text-gray-600">
-                      {selectedBatch.endDate ? new Date(selectedBatch.endDate).toLocaleDateString() : 'Not set'}
-                    </p>
-                  </div>
-                  <div>
-                    <Label>Total Students</Label>
-                    <p className="text-sm text-gray-600">{selectedBatch._count.students}</p>
-                  </div>
-                  <div>
-                    <Label>Created</Label>
-                    <p className="text-sm text-gray-600">
-                      {new Date(selectedBatch.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {selectedBatch.description && (
-                <div>
-                  <Label>Description</Label>
-                  <p className="text-sm text-gray-600">{selectedBatch.description}</p>
-                </div>
-              )}
-
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setSelectedBatch(null)}>
-                  Close
-                </Button>
-                <Button onClick={() => {
-                  setShowEditDialog(true);
-                  setSelectedBatch(null);
-                }}>
-                  Edit Batch
-                </Button>
-              </DialogFooter>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Batch Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Batch</DialogTitle>
-            <DialogDescription>
-              Update batch information
-            </DialogDescription>
-          </DialogHeader>
-          {selectedBatch && (
-            <ValidatedForm
-              fields={batchFields}
-              initialData={{
-                batchName: selectedBatch.batchName,
-                batchCode: selectedBatch.batchCode,
-                academicYear: selectedBatch.academicYear,
-                description: selectedBatch.description || '',
-                startDate: selectedBatch.startDate,
-                endDate: selectedBatch.endDate || '',
-                status: selectedBatch.status
-              }}
-              onSubmit={handleUpdateBatch}
-              submitText="Update Batch"
-              className="space-y-4"
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Assign Students Dialog */}
-      <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Assign Students to Batch</DialogTitle>
-            <DialogDescription>
-              Select students to assign to {selectedBatch?.batchName}
-            </DialogDescription>
-          </DialogHeader>
-          {selectedBatch && (
-            <div className="space-y-4">
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Students without a batch assignment will be shown below. Select students to assign to this batch.
-                </AlertDescription>
-              </Alert>
-              
-              <div className="max-h-96 overflow-y-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Select</TableHead>
-                      <TableHead>Student ID</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Class</TableHead>
-                      <TableHead>Current Batch</TableHead>
+                </TableHeader>
+                <TableBody>
+                  {filteredBatches.map((batch) => (
+                    <TableRow key={batch.id}>
+                      <TableCell className="font-medium">{batch.batchName}</TableCell>
+                      <TableCell>{batch.academicYear}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{batch.batchCode}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(batch.status)}>
+                          {batch.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Users className="h-4 w-4 text-gray-400" />
+                          {batch._count.students}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <BookOpen className="h-4 w-4 text-gray-400" />
+                          {batch._count.classes}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(batch.startDate).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewDetails(batch)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditBatch(batch)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteBatch(batch.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {students.map((student) => (
-                      <TableRow key={student.id}>
-                        <TableCell>
-                          <input
-                            type="checkbox"
-                            id={`student-${student.id}`}
-                            className="rounded border-gray-300"
-                            aria-label={`Select student ${student.name}`}
-                          />
-                        </TableCell>
-                        <TableCell className="font-medium">{student.studentId}</TableCell>
-                        <TableCell>{student.name}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{student.class.className}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {student.batch ? (
-                            <Badge variant="secondary">{student.batch.batchName}</Badge>
-                          ) : (
-                            <span className="text-gray-400">No batch</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowAssignDialog(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={() => {
-                  // Get selected students
-                  const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
-                  const selectedStudentIds = Array.from(checkboxes).map(cb => 
-                    (cb as HTMLInputElement).id.replace('student-', '')
-                  );
-                  handleAssignStudents(selectedStudentIds);
-                }}>
-                  Assign Selected Students
-                </Button>
-              </DialogFooter>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-
-  const renderCreateBatch = () => (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-900">Create New Batch</h2>
-          <p className="text-gray-600">Create a new student batch for an academic year</p>
-        </div>
-        <Button variant="outline" onClick={() => setActiveSubSection?.('batch-overview')}>
-          Back to Overview
-        </Button>
-      </div>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Batch Information</CardTitle>
-          <CardDescription>Fill in the details for the new batch</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ValidatedForm
-            fields={batchFields}
-            onSubmit={handleCreateBatch}
-            submitText="Create Batch"
-            className="space-y-4"
-          />
         </CardContent>
       </Card>
-    </div>
-  );
-
-  const renderAssignStudents = () => (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-900">Assign Students to Batches</h2>
-          <p className="text-gray-600">Assign students to appropriate batches</p>
-        </div>
-        <Button variant="outline" onClick={() => setActiveSubSection?.('batch-overview')}>
-          Back to Overview
-        </Button>
-      </div>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Select Batch and Students</CardTitle>
-          <CardDescription>Choose a batch and assign students to it</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="batch-select">Select Batch</Label>
-              <Select onValueChange={(value) => {
-                const batch = batches.find(b => b.id === value);
-                setSelectedBatch(batch || null);
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a batch" />
-                </SelectTrigger>
-                <SelectContent>
-                  {batches.map(batch => (
-                    <SelectItem key={batch.id} value={batch.id}>
-                      {batch.batchName} ({batch.academicYear})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {selectedBatch && (
-              <div>
-                <Button onClick={() => setShowAssignDialog(true)}>
-                  Assign Students to {selectedBatch.batchName}
-                </Button>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-
-  const renderBatchReports = () => (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-900">Batch Reports</h2>
-          <p className="text-gray-600">Generate comprehensive batch reports</p>
-        </div>
-        <Button variant="outline" onClick={() => setActiveSubSection?.('batch-overview')}>
-          Back to Overview
-        </Button>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="cursor-pointer hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-blue-600" />
-              Batch Statistics
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-600">Overview of all batches and student counts</p>
-          </CardContent>
-        </Card>
-        
-        <Card className="cursor-pointer hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-green-600" />
-              Student Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-600">Students distributed across batches</p>
-          </CardContent>
-        </Card>
-        
-        <Card className="cursor-pointer hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-purple-600" />
-              Academic Year Report
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-600">Batch progression over academic years</p>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 
   return (
     <div className="space-y-6">
-      {/* Navigation Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          {[
-            { id: 'batch-overview', name: 'Overview', icon: BarChart3 },
-            { id: 'create-batch', name: 'Create Batch', icon: Plus },
-            { id: 'assign-students', name: 'Assign Students', icon: UserCheck },
-            { id: 'batch-reports', name: 'Reports', icon: FileSpreadsheet }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveSubSection?.(tab.id)}
-              className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
-                activeSubSection === tab.id
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <tab.icon className="h-4 w-4" />
-              {tab.name}
-            </button>
-          ))}
-        </nav>
-      </div>
+      {renderBatchOverview()}
 
-      {/* Render Content */}
-      {renderContent()}
+      {/* Create Batch Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create New Academic Year Batch</DialogTitle>
+            <DialogDescription>
+              Create a new batch for an academic year. Students will be automatically assigned to this batch during admission.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateBatch} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="batchName">Batch Name *</Label>
+                <Input
+                  id="batchName"
+                  value={batchForm.batchName}
+                  onChange={(e) => setBatchForm({...batchForm, batchName: e.target.value})}
+                  placeholder="e.g., 2024-25, Spring 2024"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="academicYear">Academic Year *</Label>
+                <Input
+                  id="academicYear"
+                  value={batchForm.academicYear}
+                  onChange={(e) => setBatchForm({...batchForm, academicYear: e.target.value})}
+                  placeholder="e.g., 2024-25"
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="startDate">Start Date *</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={batchForm.startDate}
+                  onChange={(e) => setBatchForm({...batchForm, startDate: e.target.value})}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="endDate">End Date</Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={batchForm.endDate}
+                  onChange={(e) => setBatchForm({...batchForm, endDate: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Select value={batchForm.status} onValueChange={(value) => setBatchForm({...batchForm, status: value})}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="INACTIVE">Inactive</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={batchForm.description}
+                onChange={(e) => setBatchForm({...batchForm, description: e.target.value})}
+                placeholder="Optional description for this batch"
+                rows={3}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowCreateDialog(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Create Batch</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Batch Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Batch</DialogTitle>
+            <DialogDescription>
+              Update batch information. Note: Changing academic year may affect student assignments.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateBatch} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="editBatchName">Batch Name *</Label>
+                <Input
+                  id="editBatchName"
+                  value={batchForm.batchName}
+                  onChange={(e) => setBatchForm({...batchForm, batchName: e.target.value})}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="editAcademicYear">Academic Year *</Label>
+                <Input
+                  id="editAcademicYear"
+                  value={batchForm.academicYear}
+                  onChange={(e) => setBatchForm({...batchForm, academicYear: e.target.value})}
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="editStartDate">Start Date *</Label>
+                <Input
+                  id="editStartDate"
+                  type="date"
+                  value={batchForm.startDate}
+                  onChange={(e) => setBatchForm({...batchForm, startDate: e.target.value})}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="editEndDate">End Date</Label>
+                <Input
+                  id="editEndDate"
+                  type="date"
+                  value={batchForm.endDate}
+                  onChange={(e) => setBatchForm({...batchForm, endDate: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="editStatus">Status</Label>
+              <Select value={batchForm.status} onValueChange={(value) => setBatchForm({...batchForm, status: value})}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="INACTIVE">Inactive</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="editDescription">Description</Label>
+              <Textarea
+                id="editDescription"
+                value={batchForm.description}
+                onChange={(e) => setBatchForm({...batchForm, description: e.target.value})}
+                rows={3}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Update Batch</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch Details Dialog */}
+      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Batch Details</DialogTitle>
+            <DialogDescription>
+              View detailed information about this batch including students and classes
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedBatch && (
+            <div className="space-y-6">
+              {/* Batch Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Batch Name</Label>
+                  <p className="text-lg font-semibold">{selectedBatch.batchName}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Academic Year</Label>
+                  <p className="text-lg font-semibold">{selectedBatch.academicYear}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Batch Code</Label>
+                  <p className="text-lg font-semibold">{selectedBatch.batchCode}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Status</Label>
+                  <Badge className={getStatusColor(selectedBatch.status)}>
+                    {selectedBatch.status}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Statistics */}
+              <div className="grid grid-cols-3 gap-4">
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold">{selectedBatch._count.students}</p>
+                    <p className="text-sm text-gray-600">Students</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <BookOpen className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold">{selectedBatch._count.classes}</p>
+                    <p className="text-sm text-gray-600">Classes</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <Calendar className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                    <p className="text-sm font-bold">
+                      {new Date(selectedBatch.startDate).toLocaleDateString()}
+                    </p>
+                    <p className="text-sm text-gray-600">Start Date</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Classes in this batch */}
+              {selectedBatch.classes && selectedBatch.classes.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Classes in this Batch</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {selectedBatch.classes.map((cls) => (
+                      <Card key={cls.id}>
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-medium">{cls.className}</p>
+                              <p className="text-sm text-gray-600">{cls.classCode}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-medium">{cls._count.students}</p>
+                              <p className="text-xs text-gray-600">students</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Description */}
+              {selectedBatch.description && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Description</Label>
+                  <p className="text-gray-700">{selectedBatch.description}</p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDetailsDialog(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

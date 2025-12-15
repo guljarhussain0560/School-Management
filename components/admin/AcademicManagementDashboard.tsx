@@ -1834,71 +1834,6 @@ export default function AcademicManagementDashboard({ activeSubSection, setActiv
               </CardContent>
             </Card>
 
-            {/* Batch Upload */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Upload className="h-5 w-5" />
-                  Batch Upload
-                </CardTitle>
-                <CardDescription>
-                  Upload multiple students using CSV or Excel file
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                  <UploadCloud className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Batch Upload Students</h3>
-                  <p className="text-gray-600 mb-4">Upload CSV or Excel file with student information</p>
-                  
-                  {isStudentUploading && (
-                    <div className="mb-4">
-                      <div className="flex items-center justify-center gap-2 mb-2">
-                        <RefreshCw className="h-4 w-4 animate-spin" />
-                        <span className="text-sm text-gray-600">Uploading... {studentUploadProgress}%</span>
-                      </div>
-                      <Progress value={studentUploadProgress} className="w-full max-w-xs mx-auto" />
-                    </div>
-                  )}
-                  
-                  <div className="flex gap-3 justify-center">
-                    <Button variant="outline" onClick={downloadStudentTemplate} disabled={isStudentUploading}>
-                      <Download className="h-4 w-4 mr-2" />
-                      Download Template
-                    </Button>
-                    <div>
-                      <Input
-                        type="file"
-                        accept=".csv,.xlsx,.xls"
-                        onChange={handleStudentBatchUpload}
-                        className="hidden"
-                        id="student-batch-upload"
-                        disabled={isStudentUploading}
-                      />
-                      <Button asChild disabled={isStudentUploading}>
-                        <label htmlFor="student-batch-upload" className="cursor-pointer">
-                          <Upload className="h-4 w-4 mr-2" />
-                          {isStudentUploading ? 'Uploading...' : 'Upload File'}
-                        </label>
-                      </Button>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">Accepted formats: .csv, .xlsx, .xls</p>
-                </div>
-                
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-blue-900 mb-2">Required Fields:</h4>
-                  <ul className="text-sm text-blue-800 space-y-1">
-                    <li>• Full Name, Age, Grade, Address</li>
-                    <li>• Parent Name, Contact Number, Email Address</li>
-                  </ul>
-                  <h4 className="font-medium text-blue-900 mb-2 mt-3">Optional Fields:</h4>
-                  <ul className="text-sm text-blue-800 space-y-1">
-                    <li>• ID Proof (file path or URL)</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         );
 
@@ -2222,5 +2157,39 @@ export default function AcademicManagementDashboard({ activeSubSection, setActiv
     }
   };
 
-  return renderContent();
+  return (
+    <div className="space-y-6">
+      {/* Navigation Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          {[
+            { id: 'performance', name: 'Student Performance', icon: UserPlus },
+            { id: 'attendance', name: 'Attendance Tracking', icon: Calendar },
+            { id: 'assignments', name: 'Assignment Management', icon: FileText },
+            { id: 'curriculum', name: 'Curriculum Planning', icon: BookOpen },
+            { id: 'exams', name: 'Exam Management', icon: FileSpreadsheet },
+            { id: 'academic-calendar', name: 'Academic Calendar', icon: Calendar },
+            { id: 'teacher-assignments', name: 'Teacher Assignments', icon: User },
+            { id: 'academic-management', name: 'Academic Settings', icon: Settings }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveSubSection(tab.id)}
+              className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
+                activeSubSection === tab.id
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <tab.icon className="h-4 w-4" />
+              {tab.name}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Render Content */}
+      {renderContent()}
+    </div>
+  );
 }

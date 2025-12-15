@@ -87,7 +87,15 @@ interface SchoolSettings {
   };
 }
 
-const SchoolManagement: React.FC = () => {
+interface SchoolManagementProps {
+  activeSubSection?: string;
+  setActiveSubSection?: (section: string) => void;
+}
+
+const SchoolManagement: React.FC<SchoolManagementProps> = ({ 
+  activeSubSection = 'profile',
+  setActiveSubSection 
+}) => {
   const [schoolProfile, setSchoolProfile] = useState<SchoolProfile | null>(null);
   const [schoolSettings, setSchoolSettings] = useState<SchoolSettings | null>(null);
   const [loading, setLoading] = useState(false);
@@ -181,6 +189,7 @@ const SchoolManagement: React.FC = () => {
     toast.info(`${action} feature coming soon`);
   };
 
+
   const profileFields = [
     { name: 'schoolName', label: 'School Name', type: 'text' as const, required: true, placeholder: 'Enter school name' },
     { name: 'schoolCode', label: 'School Code', type: 'text' as const, required: true, placeholder: 'SCH001' },
@@ -247,6 +256,337 @@ const SchoolManagement: React.FC = () => {
     }
   ];
 
+  const renderContent = () => {
+    switch (activeSubSection) {
+      case 'profile':
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>School Profile</CardTitle>
+                    <CardDescription>Basic information about your school</CardDescription>
+                  </div>
+                  <Button onClick={() => setShowProfileDialog(true)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Profile
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="flex items-center justify-center h-32">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                  </div>
+                ) : schoolProfile ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <Label>School Name</Label>
+                        <p className="text-sm text-gray-600">{schoolProfile.schoolName}</p>
+                      </div>
+                      <div>
+                        <Label>School Code</Label>
+                        <p className="text-sm text-gray-600">{schoolProfile.schoolCode}</p>
+                      </div>
+                      <div>
+                        <Label>Address</Label>
+                        <p className="text-sm text-gray-600">{schoolProfile.address}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>City</Label>
+                          <p className="text-sm text-gray-600">{schoolProfile.city}</p>
+                        </div>
+                        <div>
+                          <Label>State</Label>
+                          <p className="text-sm text-gray-600">{schoolProfile.state}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Pincode</Label>
+                          <p className="text-sm text-gray-600">{schoolProfile.pincode}</p>
+                        </div>
+                        <div>
+                          <Label>Country</Label>
+                          <p className="text-sm text-gray-600">{schoolProfile.country}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <div>
+                        <Label>Contact Information</Label>
+                        <div className="space-y-2 mt-2">
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm text-gray-600">{schoolProfile.phone}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm text-gray-600">{schoolProfile.email}</span>
+                          </div>
+                          {schoolProfile.website && (
+                            <div className="flex items-center gap-2">
+                              <Globe className="h-4 w-4 text-gray-400" />
+                              <span className="text-sm text-gray-600">{schoolProfile.website}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Academic Information</Label>
+                        <div className="space-y-2 mt-2">
+                          <div>
+                            <span className="text-sm font-medium">Established:</span>
+                            <span className="text-sm text-gray-600 ml-2">{schoolProfile.establishedYear}</span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium">Board:</span>
+                            <span className="text-sm text-gray-600 ml-2">{schoolProfile.board}</span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium">Affiliation:</span>
+                            <span className="text-sm text-gray-600 ml-2">{schoolProfile.affiliation}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Principal Information</Label>
+                        <div className="space-y-2 mt-2">
+                          <div>
+                            <span className="text-sm font-medium">Name:</span>
+                            <span className="text-sm text-gray-600 ml-2">{schoolProfile.principalName}</span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium">Email:</span>
+                            <span className="text-sm text-gray-600 ml-2">{schoolProfile.principalEmail}</span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium">Phone:</span>
+                            <span className="text-sm text-gray-600 ml-2">{schoolProfile.principalPhone}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <School className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">No school profile found</p>
+                    <Button onClick={() => setShowProfileDialog(true)} className="mt-4">
+                      Create Profile
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        );
+      case 'settings':
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>School Settings</CardTitle>
+                    <CardDescription>Configure academic and operational settings</CardDescription>
+                  </div>
+                  <Button onClick={() => setShowSettingsDialog(true)}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Configure Settings
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {schoolSettings ? (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">Academic Year Settings</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label>Academic Year</Label>
+                          <p className="text-sm text-gray-600">{schoolSettings.academicYear}</p>
+                        </div>
+                        <div>
+                          <Label>Session Period</Label>
+                          <p className="text-sm text-gray-600">
+                            {new Date(schoolSettings.sessionStart).toLocaleDateString()} - {new Date(schoolSettings.sessionEnd).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">Timing Settings</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label>School Timings</Label>
+                          <p className="text-sm text-gray-600">
+                            {schoolSettings.schoolTimings.start} - {schoolSettings.schoolTimings.end}
+                          </p>
+                        </div>
+                        <div>
+                          <Label>Break Timings</Label>
+                          <p className="text-sm text-gray-600">
+                            {schoolSettings.breakTimings.start} - {schoolSettings.breakTimings.end}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4">System Settings</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label>Timezone</Label>
+                          <p className="text-sm text-gray-600">{schoolSettings.systemSettings.timezone}</p>
+                        </div>
+                        <div>
+                          <Label>Date Format</Label>
+                          <p className="text-sm text-gray-600">{schoolSettings.systemSettings.dateFormat}</p>
+                        </div>
+                        <div>
+                          <Label>Currency</Label>
+                          <p className="text-sm text-gray-600">{schoolSettings.systemSettings.currency}</p>
+                        </div>
+                        <div>
+                          <Label>Language</Label>
+                          <p className="text-sm text-gray-600">{schoolSettings.systemSettings.language}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">No settings configured</p>
+                    <Button onClick={() => setShowSettingsDialog(true)} className="mt-4">
+                      Configure Settings
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        );
+      case 'compliance':
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Compliance & Reports</CardTitle>
+                <CardDescription>Manage regulatory compliance and generate reports</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleComplianceAction('Regulatory Compliance')}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Shield className="h-5 w-5 text-blue-600" />
+                        Regulatory Compliance
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-600">Track and manage regulatory requirements</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleComplianceAction('Audit Reports')}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <FileText className="h-5 w-5 text-green-600" />
+                        Audit Reports
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-600">Generate audit and compliance reports</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleComplianceAction('Certifications')}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5 text-purple-600" />
+                        Certifications
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-600">Manage school certifications and accreditations</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      case 'system-config':
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>System Configuration</CardTitle>
+                <CardDescription>Advanced system configuration and maintenance</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleSystemConfigAction('Database Management')}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Database className="h-5 w-5 text-blue-600" />
+                        Database Management
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-600">Database backup, restore, and maintenance</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleSystemConfigAction('User Management')}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Users className="h-5 w-5 text-green-600" />
+                        User Management
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-600">System users, roles, and permissions</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleSystemConfigAction('System Analytics')}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <BarChart3 className="h-5 w-5 text-purple-600" />
+                        System Analytics
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-600">System performance and usage analytics</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      default:
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>School Profile</CardTitle>
+                <CardDescription>Basic information about your school</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8 text-gray-500">
+                  Select a section from the navigation to get started
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -257,321 +597,33 @@ const SchoolManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="profile">School Profile</TabsTrigger>
-          <TabsTrigger value="settings">School Settings</TabsTrigger>
-          <TabsTrigger value="compliance">Compliance</TabsTrigger>
-          <TabsTrigger value="system-config">System Config</TabsTrigger>
-        </TabsList>
+      {/* Navigation Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          {[
+            { id: 'profile', name: 'School Profile', icon: School },
+            { id: 'settings', name: 'School Settings', icon: Settings },
+            { id: 'compliance', name: 'Compliance', icon: Shield },
+            { id: 'system-config', name: 'System Config', icon: Database }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveSubSection?.(tab.id)}
+              className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
+                activeSubSection === tab.id
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <tab.icon className="h-4 w-4" />
+              {tab.name}
+            </button>
+          ))}
+        </nav>
+      </div>
 
-        {/* School Profile Tab */}
-        <TabsContent value="profile" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>School Profile</CardTitle>
-                  <CardDescription>Basic information about your school</CardDescription>
-                </div>
-                <Button onClick={() => setShowProfileDialog(true)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Profile
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="flex items-center justify-center h-32">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                </div>
-              ) : schoolProfile ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <Label>School Name</Label>
-                      <p className="text-sm text-gray-600">{schoolProfile.schoolName}</p>
-                    </div>
-                    <div>
-                      <Label>School Code</Label>
-                      <p className="text-sm text-gray-600">{schoolProfile.schoolCode}</p>
-                    </div>
-                    <div>
-                      <Label>Address</Label>
-                      <p className="text-sm text-gray-600">{schoolProfile.address}</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>City</Label>
-                        <p className="text-sm text-gray-600">{schoolProfile.city}</p>
-                      </div>
-                      <div>
-                        <Label>State</Label>
-                        <p className="text-sm text-gray-600">{schoolProfile.state}</p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Pincode</Label>
-                        <p className="text-sm text-gray-600">{schoolProfile.pincode}</p>
-                      </div>
-                      <div>
-                        <Label>Country</Label>
-                        <p className="text-sm text-gray-600">{schoolProfile.country}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Contact Information</Label>
-                      <div className="space-y-2 mt-2">
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-600">{schoolProfile.phone}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-600">{schoolProfile.email}</span>
-                        </div>
-                        {schoolProfile.website && (
-                          <div className="flex items-center gap-2">
-                            <Globe className="h-4 w-4 text-gray-400" />
-                            <span className="text-sm text-gray-600">{schoolProfile.website}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Academic Information</Label>
-                      <div className="space-y-2 mt-2">
-                        <div>
-                          <span className="text-sm font-medium">Established:</span>
-                          <span className="text-sm text-gray-600 ml-2">{schoolProfile.establishedYear}</span>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium">Board:</span>
-                          <span className="text-sm text-gray-600 ml-2">{schoolProfile.board}</span>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium">Affiliation:</span>
-                          <span className="text-sm text-gray-600 ml-2">{schoolProfile.affiliation}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <Label>Principal Information</Label>
-                      <div className="space-y-2 mt-2">
-                        <div>
-                          <span className="text-sm font-medium">Name:</span>
-                          <span className="text-sm text-gray-600 ml-2">{schoolProfile.principalName}</span>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium">Email:</span>
-                          <span className="text-sm text-gray-600 ml-2">{schoolProfile.principalEmail}</span>
-                        </div>
-                        <div>
-                          <span className="text-sm font-medium">Phone:</span>
-                          <span className="text-sm text-gray-600 ml-2">{schoolProfile.principalPhone}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <School className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No school profile found</p>
-                  <Button onClick={() => setShowProfileDialog(true)} className="mt-4">
-                    Create Profile
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* School Settings Tab */}
-        <TabsContent value="settings" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>School Settings</CardTitle>
-                  <CardDescription>Configure academic and operational settings</CardDescription>
-                </div>
-                <Button onClick={() => setShowSettingsDialog(true)}>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Configure Settings
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {schoolSettings ? (
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">Academic Year Settings</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label>Academic Year</Label>
-                        <p className="text-sm text-gray-600">{schoolSettings.academicYear}</p>
-                      </div>
-                      <div>
-                        <Label>Session Period</Label>
-                        <p className="text-sm text-gray-600">
-                          {new Date(schoolSettings.sessionStart).toLocaleDateString()} - {new Date(schoolSettings.sessionEnd).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">Timing Settings</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label>School Timings</Label>
-                        <p className="text-sm text-gray-600">
-                          {schoolSettings.schoolTimings.start} - {schoolSettings.schoolTimings.end}
-                        </p>
-                      </div>
-                      <div>
-                        <Label>Break Timings</Label>
-                        <p className="text-sm text-gray-600">
-                          {schoolSettings.breakTimings.start} - {schoolSettings.breakTimings.end}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">System Settings</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label>Timezone</Label>
-                        <p className="text-sm text-gray-600">{schoolSettings.systemSettings.timezone}</p>
-                      </div>
-                      <div>
-                        <Label>Date Format</Label>
-                        <p className="text-sm text-gray-600">{schoolSettings.systemSettings.dateFormat}</p>
-                      </div>
-                      <div>
-                        <Label>Currency</Label>
-                        <p className="text-sm text-gray-600">{schoolSettings.systemSettings.currency}</p>
-                      </div>
-                      <div>
-                        <Label>Language</Label>
-                        <p className="text-sm text-gray-600">{schoolSettings.systemSettings.language}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No settings configured</p>
-                  <Button onClick={() => setShowSettingsDialog(true)} className="mt-4">
-                    Configure Settings
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Compliance Tab */}
-        <TabsContent value="compliance" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Compliance & Reports</CardTitle>
-              <CardDescription>Manage regulatory compliance and generate reports</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleComplianceAction('Regulatory Compliance')}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Shield className="h-5 w-5 text-blue-600" />
-                      Regulatory Compliance
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-600">Track and manage regulatory requirements</p>
-                  </CardContent>
-                </Card>
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleComplianceAction('Audit Reports')}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5 text-green-600" />
-                      Audit Reports
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-600">Generate audit and compliance reports</p>
-                  </CardContent>
-                </Card>
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleComplianceAction('Certifications')}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <CheckCircle className="h-5 w-5 text-purple-600" />
-                      Certifications
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-600">Manage school certifications and accreditations</p>
-                  </CardContent>
-                </Card>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* System Config Tab */}
-        <TabsContent value="system-config" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>System Configuration</CardTitle>
-              <CardDescription>Advanced system configuration and maintenance</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleSystemConfigAction('Database Management')}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Database className="h-5 w-5 text-blue-600" />
-                      Database Management
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-600">Database backup, restore, and maintenance</p>
-                  </CardContent>
-                </Card>
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleSystemConfigAction('User Management')}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5 text-green-600" />
-                      User Management
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-600">System users, roles, and permissions</p>
-                  </CardContent>
-                </Card>
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleSystemConfigAction('System Analytics')}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <BarChart3 className="h-5 w-5 text-purple-600" />
-                      System Analytics
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-600">System performance and usage analytics</p>
-                  </CardContent>
-                </Card>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      {/* Render Content */}
+      {renderContent()}
 
       {/* Profile Edit Dialog */}
       <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
@@ -579,7 +631,7 @@ const SchoolManagement: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Edit School Profile</DialogTitle>
             <DialogDescription>
-              Update your school's basic information and details
+              Update your school&apos;s basic information and details
             </DialogDescription>
           </DialogHeader>
           <FormWithExcel
@@ -637,6 +689,7 @@ const SchoolManagement: React.FC = () => {
       </Dialog>
     </div>
   );
+
 };
 
 export default SchoolManagement;

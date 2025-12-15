@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 import { 
@@ -25,7 +25,10 @@ import {
   Mail,
   Calendar,
   DollarSign,
-  RefreshCw
+  RefreshCw,
+  Shield,
+  Calculator,
+  FileSpreadsheet
 } from 'lucide-react'
 
 interface Employee {
@@ -80,11 +83,22 @@ export default function EmployeeManagementDashboard({ activeSubSection, setActiv
   const [isLoading, setIsLoading] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [itemsPerPage, setItemsPerPage] = useState(50) // Increased from 10 to 50
   const [search, setSearch] = useState('')
   const [field, setField] = useState('name')
   const [department, setDepartment] = useState('all')
   const [status, setStatus] = useState('all')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
+  const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [downloadFilters, setDownloadFilters] = useState({
+    department: 'all',
+    status: 'all',
+    format: 'csv'
+  })
 
   // Form state
   const [formData, setFormData] = useState({
@@ -128,14 +142,14 @@ export default function EmployeeManagementDashboard({ activeSubSection, setActiv
 
   useEffect(() => {
     fetchEmployees()
-  }, [currentPage, search, field, department, status])
+  }, [currentPage, itemsPerPage, search, field, department, status])
 
   const fetchEmployees = async () => {
     setIsLoading(true)
     try {
       const params = new URLSearchParams({
         page: currentPage.toString(),
-        limit: '10',
+        limit: itemsPerPage.toString(),
         search: search,
         field: field,
         department: department,
@@ -148,6 +162,7 @@ export default function EmployeeManagementDashboard({ activeSubSection, setActiv
         const data = await response.json()
         setEmployees(data.employees || [])
         setTotalPages(data.pagination?.totalPages || 1)
+        setTotalCount(data.pagination?.totalCount || 0)
         setCurrentPage(data.pagination?.currentPage || currentPage)
         
         if (data.summary) {
@@ -233,6 +248,53 @@ export default function EmployeeManagementDashboard({ activeSubSection, setActiv
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
+  }
+
+  const handleViewEmployee = (employee: Employee) => {
+    setSelectedEmployee(employee)
+    setIsViewDialogOpen(true)
+  }
+
+  const handleDownloadEmployees = async () => {
+    setIsDownloading(true)
+    try {
+      // Build query parameters for filtered download
+      const params = new URLSearchParams({
+        department: downloadFilters.department,
+        status: downloadFilters.status,
+        format: downloadFilters.format,
+        download: 'true'
+      })
+
+      const response = await fetch(`/api/employee/download?${params}`)
+      
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        
+        // Generate filename with filters
+        const departmentText = downloadFilters.department === 'all' ? 'All' : downloadFilters.department
+        const statusText = downloadFilters.status === 'all' ? 'All' : downloadFilters.status
+        const timestamp = new Date().toISOString().split('T')[0]
+        
+        a.download = `employees_${departmentText}_${statusText}_${timestamp}.${downloadFilters.format}`
+        a.click()
+        window.URL.revokeObjectURL(url)
+        
+        toast.success('Employee list downloaded successfully!')
+        setIsDownloadDialogOpen(false)
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to download employee list')
+      }
+    } catch (error) {
+      console.error('Error downloading employees:', error)
+      toast.error('Failed to download employee list')
+    } finally {
+      setIsDownloading(false)
+    }
   }
 
   const handleFixSchoolIds = async () => {
@@ -406,7 +468,10 @@ export default function EmployeeManagementDashboard({ activeSubSection, setActiv
                 <p className="text-gray-600">Manage school employees and staff</p>
               </div>
         <div className="flex gap-2">
-          <Button onClick={downloadEmployeeList} variant="outline">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsDownloadDialogOpen(true)}
+          >
             <Download className="h-4 w-4 mr-2" />
             Download List
           </Button>
@@ -751,6 +816,35 @@ export default function EmployeeManagementDashboard({ activeSubSection, setActiv
               Search
             </Button>
           </div>
+          
+          {/* Items per page selector */}
+          <div className="flex items-center gap-4 mt-4 pt-4 border-t">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="itemsPerPage">Show:</Label>
+              <Select value={itemsPerPage.toString()} onValueChange={(value) => {
+                setItemsPerPage(parseInt(value))
+                setCurrentPage(1)
+              }}>
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="999999">All</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-gray-500">per page</span>
+            </div>
+            
+            {totalCount > 0 && (
+              <div className="text-sm text-gray-500">
+                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount} employees
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -767,45 +861,75 @@ export default function EmployeeManagementDashboard({ activeSubSection, setActiv
           ) : (
             <div className="space-y-4">
               {employees.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No employees found
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No employees found</h3>
+                  <p className="text-gray-500 mb-4">
+                    {search || department !== 'all' || status !== 'all' 
+                      ? 'Try adjusting your search criteria or filters'
+                      : 'Get started by adding your first employee'
+                    }
+                  </p>
+                  {!search && department === 'all' && status === 'all' && (
+                    <Button onClick={() => setIsDialogOpen(true)}>
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Add First Employee
+                    </Button>
+                  )}
                 </div>
               ) : (
                 employees.map((employee) => (
-                  <div key={employee.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div key={employee.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                     <div className="flex items-center gap-4 flex-1">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Users className="h-5 w-5 text-blue-600" />
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Users className="h-6 w-6 text-blue-600" />
                       </div>
                       <div className="flex-1">
-                        <p className="font-medium">{employee.name}</p>
-                        <p className="text-sm text-gray-500">ID: {employee.employeeId}</p>
-                        <p className="text-sm text-gray-500">{employee.department} - {employee.position}</p>
-                        <p className="text-sm text-gray-500">₹{employee.salary.toLocaleString()}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <div className="flex flex-col items-end gap-1">
-                        <Select 
-                          value={employee.status} 
-                          onValueChange={(value) => handleStatusChange(employee.id, value)}
-                        >
-                          <SelectTrigger className="w-32 h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="ACTIVE">Active</SelectItem>
-                            <SelectItem value="INACTIVE">Inactive</SelectItem>
-                            <SelectItem value="TERMINATED">Terminated</SelectItem>
-                            <SelectItem value="ON_LEAVE">On Leave</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <div className="text-sm text-gray-500">
-                          {new Date(employee.dateOfJoining).toLocaleDateString()}
+                        <div className="flex items-center gap-3 mb-1">
+                          <p className="font-semibold text-gray-900">{employee.name}</p>
+                          <Badge 
+                            variant={employee.status === 'ACTIVE' ? 'default' : 'secondary'}
+                            className={`text-xs ${
+                              employee.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                              employee.status === 'INACTIVE' ? 'bg-gray-100 text-gray-800' :
+                              employee.status === 'TERMINATED' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'
+                            }`}
+                          >
+                            {employee.status}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-1">ID: {employee.employeeId}</p>
+                        <p className="text-sm text-gray-600 mb-1">{employee.department} • {employee.position}</p>
+                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                          <span>₹{employee.salary.toLocaleString()}</span>
+                          <span>•</span>
+                          <span>Joined: {new Date(employee.dateOfJoining).toLocaleDateString()}</span>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm">
-                        <Eye className="h-4 w-4 mr-1" />
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <Select 
+                        value={employee.status} 
+                        onValueChange={(value) => handleStatusChange(employee.id, value)}
+                      >
+                        <SelectTrigger className="w-36 h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ACTIVE">Active</SelectItem>
+                          <SelectItem value="INACTIVE">Inactive</SelectItem>
+                          <SelectItem value="TERMINATED">Terminated</SelectItem>
+                          <SelectItem value="ON_LEAVE">On Leave</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-9"
+                        onClick={() => handleViewEmployee(employee)}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
                         View
                       </Button>
                     </div>
@@ -818,14 +942,22 @@ export default function EmployeeManagementDashboard({ activeSubSection, setActiv
       </Card>
 
       {/* Pagination */}
-      {totalPages > 1 && (
+      {totalCount > 0 && (
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-500">
-                Page {currentPage} of {totalPages}
+                Page {currentPage} of {totalPages} • {totalCount} total employees
               </div>
               <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(1)}
+                  disabled={currentPage === 1}
+                >
+                  First
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -834,6 +966,9 @@ export default function EmployeeManagementDashboard({ activeSubSection, setActiv
                 >
                   Previous
                 </Button>
+                <span className="px-3 py-1 text-sm bg-gray-100 rounded">
+                  {currentPage}
+                </span>
                 <Button
                   variant="outline"
                   size="sm"
@@ -841,6 +976,14 @@ export default function EmployeeManagementDashboard({ activeSubSection, setActiv
                   disabled={currentPage === totalPages}
                 >
                   Next
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(totalPages)}
+                  disabled={currentPage === totalPages}
+                >
+                  Last
                 </Button>
               </div>
             </div>
@@ -1031,5 +1174,332 @@ export default function EmployeeManagementDashboard({ activeSubSection, setActiv
     }
   };
 
-  return renderContent();
+  return (
+    <div className="space-y-6">
+      {/* Navigation Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          {[
+            { id: 'employee-management', name: 'Employee Records', icon: Users },
+            { id: 'user-management', name: 'User Management', icon: Shield },
+            { id: 'payroll-integration', name: 'Payroll Integration', icon: Calculator },
+            { id: 'employee-reports', name: 'Employee Reports', icon: FileSpreadsheet }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveSubSection(tab.id)}
+              className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm ${
+                activeSubSection === tab.id
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <tab.icon className="h-4 w-4" />
+              {tab.name}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Render Content */}
+      {renderContent()}
+
+      {/* Download Employee List Dialog */}
+      <Dialog open={isDownloadDialogOpen} onOpenChange={setIsDownloadDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5" />
+              Download Employee List
+            </DialogTitle>
+            <DialogDescription>
+              Choose filters and format for downloading employee data
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Department Filter */}
+            <div>
+              <Label htmlFor="downloadDepartment">Department</Label>
+              <Select 
+                value={downloadFilters.department} 
+                onValueChange={(value) => setDownloadFilters({...downloadFilters, department: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select department" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Status Filter */}
+            <div>
+              <Label htmlFor="downloadStatus">Status</Label>
+              <Select 
+                value={downloadFilters.status} 
+                onValueChange={(value) => setDownloadFilters({...downloadFilters, status: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="INACTIVE">Inactive</SelectItem>
+                  <SelectItem value="TERMINATED">Terminated</SelectItem>
+                  <SelectItem value="ON_LEAVE">On Leave</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Format Selection */}
+            <div>
+              <Label htmlFor="downloadFormat">Format</Label>
+              <Select 
+                value={downloadFilters.format} 
+                onValueChange={(value) => setDownloadFilters({...downloadFilters, format: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select format" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="csv">CSV (Excel Compatible)</SelectItem>
+                  <SelectItem value="xlsx">Excel (.xlsx)</SelectItem>
+                  <SelectItem value="json">JSON</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Preview Info */}
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Download Preview:</strong><br />
+                Department: {downloadFilters.department === 'all' ? 'All' : downloadFilters.department}<br />
+                Status: {downloadFilters.status === 'all' ? 'All' : downloadFilters.status}<br />
+                Format: {downloadFilters.format.toUpperCase()}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDownloadDialogOpen(false)}
+              disabled={isDownloading}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleDownloadEmployees}
+              disabled={isDownloading}
+            >
+              {isDownloading ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Downloading...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Employee Details Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Employee Details
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedEmployee && (
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserPlus className="h-4 w-4" />
+                    Basic Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Full Name</Label>
+                      <p className="text-lg font-semibold">{selectedEmployee.name}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Employee ID</Label>
+                      <p className="text-lg font-mono">{selectedEmployee.employeeId}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Email</Label>
+                      <p className="text-sm">{selectedEmployee.email}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Phone</Label>
+                      <p className="text-sm">{selectedEmployee.phone || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Date of Birth</Label>
+                      <p className="text-sm">{selectedEmployee.dateOfBirth ? new Date(selectedEmployee.dateOfBirth).toLocaleDateString() : 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Date of Joining</Label>
+                      <p className="text-sm">{new Date(selectedEmployee.dateOfJoining).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Professional Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Building className="h-4 w-4" />
+                    Professional Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Department</Label>
+                      <p className="text-sm font-medium">{selectedEmployee.department}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Position</Label>
+                      <p className="text-sm font-medium">{selectedEmployee.position}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Salary</Label>
+                      <p className="text-lg font-semibold text-green-600">₹{selectedEmployee.salary.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Status</Label>
+                      <Badge 
+                        variant={selectedEmployee.status === 'ACTIVE' ? 'default' : 'secondary'}
+                        className={`${
+                          selectedEmployee.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                          selectedEmployee.status === 'INACTIVE' ? 'bg-gray-100 text-gray-800' :
+                          selectedEmployee.status === 'TERMINATED' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}
+                      >
+                        {selectedEmployee.status}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Contact & Emergency Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Contact & Emergency Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Address</Label>
+                      <p className="text-sm">{selectedEmployee.address || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Emergency Contact</Label>
+                      <p className="text-sm">{selectedEmployee.emergencyContact || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Emergency Phone</Label>
+                      <p className="text-sm">{selectedEmployee.emergencyPhone || 'Not provided'}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Qualifications & Experience */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Qualifications & Experience
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Qualifications</Label>
+                      <p className="text-sm">{selectedEmployee.qualifications || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Experience</Label>
+                      <p className="text-sm">{selectedEmployee.experience || 'Not provided'}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Bank Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Bank Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Bank Account</Label>
+                      <p className="text-sm font-mono">{selectedEmployee.bankAccount || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">IFSC Code</Label>
+                      <p className="text-sm font-mono">{selectedEmployee.ifscCode || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">PAN Number</Label>
+                      <p className="text-sm font-mono">{selectedEmployee.panNumber || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Aadhar Number</Label>
+                      <p className="text-sm font-mono">{selectedEmployee.aadharNumber || 'Not provided'}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Notes */}
+              {selectedEmployee.notes && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Additional Notes
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-700">{selectedEmployee.notes}</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }

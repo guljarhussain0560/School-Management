@@ -23,9 +23,9 @@ export default function BatchManagementDashboard({
   const [batchStats, setBatchStats] = useState({
     totalBatches: 0,
     activeBatches: 0,
-    archivedBatches: 0,
+    completedBatches: 0,
     totalStudents: 0,
-    unassignedStudents: 0
+    totalClasses: 0
   });
 
   const [recentBatches, setRecentBatches] = useState([]);
@@ -57,7 +57,7 @@ export default function BatchManagementDashboard({
     }
   };
 
-  const getStatusBadge = (status: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED') => {
+  const getStatusBadge = (status: 'ACTIVE' | 'INACTIVE' | 'COMPLETED') => {
     switch (status) {
       case 'ACTIVE':
         return (
@@ -73,11 +73,11 @@ export default function BatchManagementDashboard({
             Inactive
           </Badge>
         );
-      case 'ARCHIVED':
+      case 'COMPLETED':
         return (
-          <Badge className="bg-orange-100 text-orange-800">
-            <Clock className="w-3 h-3 mr-1" />
-            Archived
+          <Badge className="bg-blue-100 text-blue-800">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Completed
           </Badge>
         );
       default:
@@ -128,13 +128,13 @@ export default function BatchManagementDashboard({
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Archived Batches</CardTitle>
-            <Clock className="h-4 w-4 text-orange-600" />
+            <CardTitle className="text-sm font-medium">Completed Batches</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{batchStats.archivedBatches}</div>
+            <div className="text-2xl font-bold text-green-600">{batchStats.completedBatches}</div>
             <p className="text-xs text-muted-foreground">
-              Historical records
+              Completed academic years
             </p>
           </CardContent>
         </Card>
@@ -154,13 +154,13 @@ export default function BatchManagementDashboard({
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Unassigned Students</CardTitle>
-            <AlertCircle className="h-4 w-4 text-orange-600" />
+            <CardTitle className="text-sm font-medium">Total Classes</CardTitle>
+            <GraduationCap className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{batchStats.unassignedStudents}</div>
+            <div className="text-2xl font-bold text-blue-600">{batchStats.totalClasses}</div>
             <p className="text-xs text-muted-foreground">
-              Need batch assignment
+              Across all batches
             </p>
           </CardContent>
         </Card>

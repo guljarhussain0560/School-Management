@@ -7,7 +7,7 @@ import ToasterProvider from '@/components/providers/ToasterProvider';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Tayog School Management System',
+  title: 'School Management System',
   description: 'Comprehensive school management solution for administrators, teachers, and transport staff',
 };
 

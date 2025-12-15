@@ -105,8 +105,8 @@ export default function FeeStructureManagement() {
     isActive: true,
     applicableFrom: new Date().toISOString().split('T')[0],
     applicableTo: '',
-    classId: '',
-    batchId: ''
+    classId: 'all',
+    batchId: 'all'
   })
 
   const feeFrequencies = [
@@ -181,10 +181,16 @@ export default function FeeStructureManagement() {
     setLoading(true)
 
     try {
+      const payload = {
+        ...formData,
+        classId: formData.classId === 'all' ? null : formData.classId,
+        batchId: formData.batchId === 'all' ? null : formData.batchId
+      }
+      
       const response = await fetch('/api/financial/fee-structures', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       })
 
       if (response.ok) {
@@ -211,13 +217,17 @@ export default function FeeStructureManagement() {
     setLoading(true)
 
     try {
+      const payload = {
+        id: editingFee.id,
+        ...formData,
+        classId: formData.classId === 'all' ? null : formData.classId,
+        batchId: formData.batchId === 'all' ? null : formData.batchId
+      }
+      
       const response = await fetch('/api/financial/fee-structures', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: editingFee.id,
-          ...formData
-        })
+        body: JSON.stringify(payload)
       })
 
       if (response.ok) {
@@ -267,8 +277,8 @@ export default function FeeStructureManagement() {
       isActive: true,
       applicableFrom: new Date().toISOString().split('T')[0],
       applicableTo: '',
-      classId: '',
-      batchId: ''
+      classId: 'all',
+      batchId: 'all'
     })
   }
 
@@ -284,8 +294,8 @@ export default function FeeStructureManagement() {
       isActive: feeStructure.isActive,
       applicableFrom: feeStructure.applicableFrom.split('T')[0],
       applicableTo: feeStructure.applicableTo ? feeStructure.applicableTo.split('T')[0] : '',
-      classId: feeStructure.class?.id || '',
-      batchId: feeStructure.batch?.id || ''
+      classId: feeStructure.class?.id || 'all',
+      batchId: feeStructure.batch?.id || 'all'
     })
   }
 
@@ -422,7 +432,7 @@ export default function FeeStructureManagement() {
                         <SelectValue placeholder="All classes" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Classes</SelectItem>
+                        <SelectItem value="all">All Classes</SelectItem>
                         {classes.map((classItem) => (
                           <SelectItem key={classItem.id} value={classItem.id}>
                             {classItem.className}
@@ -441,7 +451,7 @@ export default function FeeStructureManagement() {
                         <SelectValue placeholder="All batches" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Batches</SelectItem>
+                        <SelectItem value="all">All Batches</SelectItem>
                         {batches.map((batch) => (
                           <SelectItem key={batch.id} value={batch.id}>
                             {batch.batchName}

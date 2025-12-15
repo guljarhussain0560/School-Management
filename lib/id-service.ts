@@ -62,21 +62,44 @@ export class IDService {
   }
 
   /**
-   * Generate Class Code
+   * Generate Grade Code
    */
-  static async generateClassCode(batchCode: string, level: number, section: string, schoolId: string): Promise<string> {
-    const classCode = IDGenerator.generateClassCode(batchCode, level, section);
-    
-    // Check if class code already exists
-    const existing = await prisma.class.findFirst({
-      where: { classCode, schoolId }
+  static async generateGradeCode(gradeLevel: number, schoolId: string): Promise<string> {
+    // Get existing grade codes for this school
+    const existingGrades = await prisma.grade.findMany({
+      where: { schoolId },
+      select: { gradeCode: true }
     });
 
-    if (existing) {
-      throw new Error(`Class code ${classCode} already exists`);
-    }
+    const existingCodes = existingGrades.map(g => g.gradeCode);
+    const sequence = await IDGenerator.getNextSequence(
+      `G${gradeLevel.toString().padStart(2, '0')}`,
+      existingCodes
+    );
 
-    return classCode;
+    return `G${gradeLevel.toString().padStart(2, '0')}${sequence}`;
+  }
+
+  /**
+   * Generate Class Code (Section)
+   */
+  static async generateClassCode(batchCode: string, gradeCode: string, sectionName: string, schoolId: string): Promise<string> {
+    // Get existing class codes for this batch
+    const existingClasses = await prisma.class.findMany({
+      where: { 
+        schoolId,
+        batch: { batchCode }
+      },
+      select: { classCode: true }
+    });
+
+    const existingCodes = existingClasses.map(c => c.classCode);
+    const sequence = await IDGenerator.getNextSequence(
+      `${gradeCode}${sectionName.toUpperCase()}`,
+      existingCodes
+    );
+
+    return `${gradeCode}${sectionName.toUpperCase()}${sequence}`;
   }
 
   /**

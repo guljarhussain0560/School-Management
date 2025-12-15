@@ -9,27 +9,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Users, Plus, Edit, Trash2, Search, Filter, Calendar, 
-  UserPlus, UserMinus, FileSpreadsheet, Download, Upload,
-  CheckCircle, XCircle, Clock, AlertCircle
+  FileSpreadsheet, Download, CheckCircle, XCircle, Clock, 
+  AlertCircle, Info, Eye, BookOpen, GraduationCap
 } from 'lucide-react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 
 interface StudentBatch {
   id: string;
-  batchCode: string; // Generated batch code
+  batchCode: string;
   batchName: string;
   academicYear: string;
   startDate: string;
   endDate?: string;
   description?: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
+  status: 'ACTIVE' | 'INACTIVE' | 'COMPLETED';
   createdAt: string;
   creator: {
     id: string;
@@ -48,23 +47,18 @@ interface StudentBatch {
     parentContact?: string;
     status: string;
   }>;
+  classes: Array<{
+    id: string;
+    className: string;
+    classCode: string;
   _count: {
     students: number;
   };
-}
-
-interface Student {
-  id: string;
-  studentId: string;
-  name: string;
-  class: {
-    className: string;
-    classCode: string;
+  }>;
+  _count: {
+    students: number;
+    classes: number;
   };
-  email?: string;
-  parentContact?: string;
-  status: string;
-  batchId?: string;
 }
 
 export default function StudentBatchManagement() {
@@ -77,20 +71,12 @@ export default function StudentBatchManagement() {
     startDate: '',
     endDate: '',
     description: '',
-    status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE' | 'ARCHIVED'
+    status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE' | 'COMPLETED'
   });
   const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false);
   const [editingBatch, setEditingBatch] = useState<StudentBatch | null>(null);
-
-  // State for students
-  const [students, setStudents] = useState<Student[]>([]);
-  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
-  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
-  const [selectedBatch, setSelectedBatch] = useState<string>('');
-
-  // State for assignment dialog
-  const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
-  const [isUnassignmentDialogOpen, setIsUnassignmentDialogOpen] = useState(false);
+  const [selectedBatch, setSelectedBatch] = useState<StudentBatch | null>(null);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 
   // Pagination and search
   const [currentPage, setCurrentPage] = useState(1);
@@ -101,69 +87,52 @@ export default function StudentBatchManagement() {
 
   useEffect(() => {
     fetchBatches();
-    fetchStudents();
   }, [currentPage, searchTerm, statusFilter]);
 
-  // Batch Management Functions
   const fetchBatches = async () => {
-    setIsLoadingBatches(true);
     try {
+    setIsLoadingBatches(true);
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: itemsPerPage.toString(),
-        status: statusFilter,
-        search: searchTerm
+        search: searchTerm,
+        status: statusFilter
       });
 
       const response = await fetch(`/api/academic/student-batches?${params}`);
       if (response.ok) {
         const data = await response.json();
         setBatches(data.batches || []);
-        setTotalPages(data.pagination?.totalPages || 1);
+        setTotalPages(data.totalPages || 1);
       } else {
-        toast.error('Failed to fetch student batches');
+        toast.error('Failed to fetch batches');
       }
     } catch (error) {
       console.error('Error fetching batches:', error);
-      toast.error('Error fetching student batches');
+      toast.error('Error fetching batches');
     } finally {
       setIsLoadingBatches(false);
     }
   };
 
-  const fetchStudents = async () => {
-    setIsLoadingStudents(true);
-    try {
-      const response = await fetch('/api/students/list');
-      if (response.ok) {
-        const data = await response.json();
-        setStudents(data.students || []);
-      } else {
-        toast.error('Failed to fetch students');
-      }
-    } catch (error) {
-      console.error('Error fetching students:', error);
-      toast.error('Error fetching students');
-    } finally {
-      setIsLoadingStudents(false);
-    }
-  };
-
-  const handleBatchSubmit = async (e: React.FormEvent) => {
+  const handleCreateBatch = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const url = editingBatch ? `/api/academic/student-batches/${editingBatch.id}` : '/api/academic/student-batches';
-      const method = editingBatch ? 'PUT' : 'POST';
+    
+    if (!batchForm.batchName || !batchForm.academicYear || !batchForm.startDate) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
 
-      const response = await fetch(url, {
-        method,
+    try {
+      const response = await fetch('/api/academic/student-batches', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(batchForm)
       });
 
       if (response.ok) {
-        const data = await response.json();
-        toast.success(data.message);
+        toast.success('Batch created successfully');
+        setIsBatchDialogOpen(false);
         setBatchForm({
           batchName: '',
           academicYear: '',
@@ -172,16 +141,44 @@ export default function StudentBatchManagement() {
           description: '',
           status: 'ACTIVE'
         });
+        fetchBatches();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to create batch');
+      }
+    } catch (error) {
+      console.error('Error creating batch:', error);
+      toast.error('Error creating batch');
+    }
+  };
+
+  const handleUpdateBatch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!editingBatch || !batchForm.batchName || !batchForm.academicYear || !batchForm.startDate) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/academic/student-batches/${editingBatch.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(batchForm)
+      });
+
+      if (response.ok) {
+        toast.success('Batch updated successfully');
         setIsBatchDialogOpen(false);
         setEditingBatch(null);
         fetchBatches();
       } else {
         const error = await response.json();
-        toast.error(error.error || 'Failed to save batch');
+        toast.error(error.error || 'Failed to update batch');
       }
     } catch (error) {
-      console.error('Error saving batch:', error);
-      toast.error('Error saving batch');
+      console.error('Error updating batch:', error);
+      toast.error('Error updating batch');
     }
   };
 
@@ -219,187 +216,323 @@ export default function StudentBatchManagement() {
     }
   };
 
-  // Student Assignment Functions
-  const handleAssignStudents = async () => {
-    if (selectedStudents.length === 0 || !selectedBatch) return;
-
+  const handleViewDetails = async (batch: StudentBatch) => {
     try {
-      const response = await fetch('/api/academic/student-batches/assign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentIds: selectedStudents,
-          batchId: selectedBatch
-        })
-      });
-
+      const response = await fetch(`/api/academic/student-batches/${batch.id}`);
       if (response.ok) {
         const data = await response.json();
-        toast.success(data.message);
-        setSelectedStudents([]);
-        setSelectedBatch('');
-        setIsAssignmentDialogOpen(false);
-        fetchBatches();
-        fetchStudents();
-      } else {
-        const error = await response.json();
-        toast.error(error.error || 'Failed to assign students');
+        setSelectedBatch(data.batch);
+        setShowDetailsDialog(true);
       }
     } catch (error) {
-      console.error('Error assigning students:', error);
-      toast.error('Error assigning students');
+      console.error('Error fetching batch details:', error);
+      toast.error('Failed to fetch batch details');
     }
   };
 
-  const handleUnassignStudents = async () => {
-    if (selectedStudents.length === 0) return;
-
-    try {
-      const response = await fetch('/api/academic/student-batches/assign', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentIds: selectedStudents
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        toast.success(data.message);
-        setSelectedStudents([]);
-        setIsUnassignmentDialogOpen(false);
-        fetchBatches();
-        fetchStudents();
-      } else {
-        const error = await response.json();
-        toast.error(error.error || 'Failed to unassign students');
-      }
-    } catch (error) {
-      console.error('Error unassigning students:', error);
-      toast.error('Error unassigning students');
-    }
-  };
-
-  const handleStudentSelect = (studentId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedStudents([...selectedStudents, studentId]);
-    } else {
-      setSelectedStudents(selectedStudents.filter(id => id !== studentId));
-    }
-  };
-
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedStudents(students.map(s => s.id));
-    } else {
-      setSelectedStudents([]);
-    }
-  };
-
-  const getStatusBadge = (status: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED') => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'ACTIVE':
-        return (
-          <Badge className="bg-green-100 text-green-800">
-            <CheckCircle className="w-3 h-3 mr-1" />
-            Active
-          </Badge>
-        );
-      case 'INACTIVE':
-        return (
-          <Badge className="bg-gray-100 text-gray-800">
-            <XCircle className="w-3 h-3 mr-1" />
-            Inactive
-          </Badge>
-        );
-      case 'ARCHIVED':
-        return (
-          <Badge className="bg-orange-100 text-orange-800">
-            <Clock className="w-3 h-3 mr-1" />
-            Archived
-          </Badge>
-        );
-      default:
-        return (
-          <Badge className="bg-gray-100 text-gray-800">
-            <XCircle className="w-3 h-3 mr-1" />
-            Unknown
-          </Badge>
-        );
+      case 'ACTIVE': return 'bg-green-100 text-green-800';
+      case 'INACTIVE': return 'bg-gray-100 text-gray-800';
+      case 'COMPLETED': return 'bg-blue-100 text-blue-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'ACTIVE': return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'INACTIVE': return <XCircle className="h-4 w-4 text-gray-600" />;
+      case 'COMPLETED': return <Clock className="h-4 w-4 text-blue-600" />;
+      default: return <AlertCircle className="h-4 w-4 text-gray-600" />;
+    }
+  };
+
+  const exportBatchData = () => {
+    const data = batches.map(batch => ({
+      'Batch Name': batch.batchName,
+      'Academic Year': batch.academicYear,
+      'Batch Code': batch.batchCode,
+      'Status': batch.status,
+      'Students Count': batch._count.students,
+      'Classes Count': batch._count.classes,
+      'Start Date': new Date(batch.startDate).toLocaleDateString(),
+      'End Date': batch.endDate ? new Date(batch.endDate).toLocaleDateString() : 'N/A',
+      'Created At': new Date(batch.createdAt).toLocaleDateString()
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Batches');
+    XLSX.writeFile(wb, 'batch-data.xlsx');
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Student Batch Management</h2>
-          <p className="text-gray-600">Organize students into academic batches and manage assignments</p>
+          <h2 className="text-2xl font-bold text-gray-900">Student Batch Management</h2>
+          <p className="text-gray-600">View and manage academic year batches</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setIsAssignmentDialogOpen(true)} variant="outline">
-            <UserPlus className="w-4 h-4 mr-2" />
-            Assign Students
+          <Button variant="outline" onClick={exportBatchData} className="flex items-center gap-2">
+            <Download className="h-4 w-4" />
+            Export
           </Button>
-          <Button onClick={() => setIsUnassignmentDialogOpen(true)} variant="outline">
-            <UserMinus className="w-4 h-4 mr-2" />
-            Unassign Students
+          <Button onClick={() => setIsBatchDialogOpen(true)} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Create Batch
           </Button>
         </div>
       </div>
 
-      <Tabs defaultValue="batches" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="batches">Batch Management</TabsTrigger>
-          <TabsTrigger value="students">Student Overview</TabsTrigger>
-        </TabsList>
+      {/* Info Alert */}
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          <strong>How Batch Management Works:</strong> Students are automatically assigned to batches during admission based on their admission year. 
+          Each batch represents an academic year (e.g., 2024-25). You can create new batches for upcoming academic years and view student distributions.
+        </AlertDescription>
+      </Alert>
 
-        {/* Batch Management Tab */}
-        <TabsContent value="batches" className="space-y-4">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <GraduationCap className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Batches</p>
+                <p className="text-2xl font-bold text-gray-900">{batches.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Active Batches</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {batches.filter(b => b.status === 'ACTIVE').length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Users className="h-6 w-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Students</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {batches.reduce((sum, batch) => sum + batch._count.students, 0)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <BookOpen className="h-6 w-6 text-orange-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Classes</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {batches.reduce((sum, batch) => sum + batch._count.classes, 0)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search batches..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="ACTIVE">Active</SelectItem>
+                <SelectItem value="INACTIVE">Inactive</SelectItem>
+                <SelectItem value="COMPLETED">Completed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Batches Table */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Student Batches</CardTitle>
-                  <CardDescription>Manage academic batches and student assignments</CardDescription>
+          <CardTitle>Academic Year Batches</CardTitle>
+          <CardDescription>
+            View and manage all academic year batches
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoadingBatches ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Batch Name</TableHead>
+                    <TableHead>Academic Year</TableHead>
+                    <TableHead>Batch Code</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Students</TableHead>
+                    <TableHead>Classes</TableHead>
+                    <TableHead>Start Date</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {batches.map((batch) => (
+                    <TableRow key={batch.id}>
+                      <TableCell className="font-medium">{batch.batchName}</TableCell>
+                      <TableCell>{batch.academicYear}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{batch.batchCode}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(batch.status)}
+                          <Badge className={getStatusColor(batch.status)}>
+                            {batch.status}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Users className="h-4 w-4 text-gray-400" />
+                          {batch._count.students}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <BookOpen className="h-4 w-4 text-gray-400" />
+                          {batch._count.classes}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(batch.startDate).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewDetails(batch)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditBatch(batch)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteBatch(batch.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-gray-600">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
                 </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Create/Edit Batch Dialog */}
                 <Dialog open={isBatchDialogOpen} onOpenChange={setIsBatchDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button onClick={() => {
-                      setEditingBatch(null);
-                      setBatchForm({
-                        batchName: '',
-                        academicYear: '',
-                        startDate: '',
-                        endDate: '',
-                        description: '',
-                        status: 'ACTIVE'
-                      });
-                    }}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create Batch
-                    </Button>
-                  </DialogTrigger>
                   <DialogContent className="max-w-2xl">
                     <DialogHeader>
-                      <DialogTitle>{editingBatch ? 'Edit Batch' : 'Create New Batch'}</DialogTitle>
+            <DialogTitle>
+              {editingBatch ? 'Edit Batch' : 'Create New Academic Year Batch'}
+            </DialogTitle>
                       <DialogDescription>
-                        {editingBatch ? 'Update batch information' : 'Create a new student batch'}
+              {editingBatch 
+                ? 'Update batch information. Note: Changing academic year may affect student assignments.'
+                : 'Create a new batch for an academic year. Students will be automatically assigned to this batch during admission.'
+              }
                       </DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={handleBatchSubmit} className="space-y-4">
+          <form onSubmit={editingBatch ? handleUpdateBatch : handleCreateBatch} className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="batchName">Batch Name *</Label>
                           <Input
                             id="batchName"
                             value={batchForm.batchName}
-                            onChange={(e) => setBatchForm({ ...batchForm, batchName: e.target.value })}
-                            placeholder="e.g., 2024-25, Batch A, Spring 2024"
+                  onChange={(e) => setBatchForm({...batchForm, batchName: e.target.value})}
+                  placeholder="e.g., 2024-25, Spring 2024"
                             required
                           />
                         </div>
@@ -408,18 +541,21 @@ export default function StudentBatchManagement() {
                           <Input
                             id="academicYear"
                             value={batchForm.academicYear}
-                            onChange={(e) => setBatchForm({ ...batchForm, academicYear: e.target.value })}
+                  onChange={(e) => setBatchForm({...batchForm, academicYear: e.target.value})}
                             placeholder="e.g., 2024-25"
                             required
                           />
                         </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="startDate">Start Date *</Label>
                           <Input
                             id="startDate"
                             type="date"
                             value={batchForm.startDate}
-                            onChange={(e) => setBatchForm({ ...batchForm, startDate: e.target.value })}
+                  onChange={(e) => setBatchForm({...batchForm, startDate: e.target.value})}
                             required
                           />
                         </div>
@@ -429,34 +565,49 @@ export default function StudentBatchManagement() {
                             id="endDate"
                             type="date"
                             value={batchForm.endDate}
-                            onChange={(e) => setBatchForm({ ...batchForm, endDate: e.target.value })}
+                  onChange={(e) => setBatchForm({...batchForm, endDate: e.target.value})}
                           />
                         </div>
-                        <div className="col-span-2">
-                          <Label htmlFor="description">Description</Label>
-                          <Textarea
-                            id="description"
-                            value={batchForm.description}
-                            onChange={(e) => setBatchForm({ ...batchForm, description: e.target.value })}
-                            placeholder="Optional description for this batch"
-                          />
                         </div>
+
                         <div>
                           <Label htmlFor="status">Status</Label>
-                          <Select value={batchForm.status} onValueChange={(value) => setBatchForm({ ...batchForm, status: value as 'ACTIVE' | 'INACTIVE' | 'ARCHIVED' })}>
+              <Select value={batchForm.status} onValueChange={(value: any) => setBatchForm({...batchForm, status: value})}>
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="ACTIVE">Active</SelectItem>
                               <SelectItem value="INACTIVE">Inactive</SelectItem>
-                              <SelectItem value="ARCHIVED">Archived</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
+
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={batchForm.description}
+                onChange={(e) => setBatchForm({...batchForm, description: e.target.value})}
+                placeholder="Optional description for this batch"
+                rows={3}
+              />
                       </div>
+
                       <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setIsBatchDialogOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => {
+                setIsBatchDialogOpen(false);
+                setEditingBatch(null);
+                setBatchForm({
+                  batchName: '',
+                  academicYear: '',
+                  startDate: '',
+                  endDate: '',
+                  description: '',
+                  status: 'ACTIVE'
+                });
+              }}>
                           Cancel
                         </Button>
                         <Button type="submit">
@@ -466,129 +617,120 @@ export default function StudentBatchManagement() {
                     </form>
                   </DialogContent>
                 </Dialog>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex gap-4">
-                  <div className="flex-1">
-                    <Input
-                      placeholder="Search batches..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+
+      {/* Batch Details Dialog */}
+      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Batch Details</DialogTitle>
+            <DialogDescription>
+              View detailed information about this batch including students and classes
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedBatch && (
+            <div className="space-y-6">
+              {/* Batch Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Batch Name</Label>
+                  <p className="text-lg font-semibold">{selectedBatch.batchName}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Academic Year</Label>
+                  <p className="text-lg font-semibold">{selectedBatch.academicYear}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Batch Code</Label>
+                  <p className="text-lg font-semibold">{selectedBatch.batchCode}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Status</Label>
+                  <div className="flex items-center gap-2">
+                    {getStatusIcon(selectedBatch.status)}
+                    <Badge className={getStatusColor(selectedBatch.status)}>
+                      {selectedBatch.status}
+                    </Badge>
                   </div>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder="Filter by status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="ACTIVE">Active</SelectItem>
-                      <SelectItem value="INACTIVE">Inactive</SelectItem>
-                      <SelectItem value="ARCHIVED">Archived</SelectItem>
-                    </SelectContent>
-                  </Select>
+              </div>
+                  </div>
+
+              {/* Statistics */}
+              <div className="grid grid-cols-3 gap-4">
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold">{selectedBatch._count.students}</p>
+                    <p className="text-sm text-gray-600">Students</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <BookOpen className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold">{selectedBatch._count.classes}</p>
+                    <p className="text-sm text-gray-600">Classes</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <Calendar className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                    <p className="text-sm font-bold">
+                      {new Date(selectedBatch.startDate).toLocaleDateString()}
+                    </p>
+                    <p className="text-sm text-gray-600">Start Date</p>
+                  </CardContent>
+                </Card>
                 </div>
 
-                {isLoadingBatches ? (
-                  <div className="text-center py-8">Loading batches...</div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Batch Code</TableHead>
-                        <TableHead>Batch Name</TableHead>
-                        <TableHead>Academic Year</TableHead>
-                        <TableHead>Start Date</TableHead>
-                        <TableHead>Students</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Created By</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {batches.map((batch) => (
-                        <TableRow key={batch.id}>
-                          <TableCell className="font-medium font-mono">{batch.batchCode}</TableCell>
-                          <TableCell>{batch.batchName}</TableCell>
-                          <TableCell>{batch.academicYear}</TableCell>
-                          <TableCell>{formatDate(batch.startDate)}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{batch._count.students} students</Badge>
-                          </TableCell>
-                          <TableCell>{getStatusBadge(batch.status)}</TableCell>
-                          <TableCell>{batch.creator.name}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="outline" onClick={() => handleEditBatch(batch)}>
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={() => handleDeleteBatch(batch.id)}>
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+              {/* Classes in this batch */}
+              {selectedBatch.classes && selectedBatch.classes.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Classes in this Batch</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {selectedBatch.classes.map((cls) => (
+                      <Card key={cls.id}>
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-medium">{cls.className}</p>
+                              <p className="text-sm text-gray-600">{cls.classCode}</p>
                             </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
+                            <div className="text-right">
+                              <p className="text-sm font-medium">{cls._count.students}</p>
+                              <p className="text-xs text-gray-600">students</p>
+                            </div>
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-        {/* Student Overview Tab */}
-        <TabsContent value="students" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Student Overview</CardTitle>
-              <CardDescription>View all students and their batch assignments</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingStudents ? (
-                <div className="text-center py-8">Loading students...</div>
-              ) : (
+              {/* Students in this batch */}
+              {selectedBatch.students && selectedBatch.students.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Students in this Batch</h3>
+                  <div className="max-h-60 overflow-y-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-12">
-                        <Checkbox
-                          checked={selectedStudents.length === students.length && students.length > 0}
-                          onCheckedChange={handleSelectAll}
-                        />
-                      </TableHead>
                       <TableHead>Student ID</TableHead>
                       <TableHead>Name</TableHead>
-                      <TableHead>Grade</TableHead>
-                      <TableHead>Batch</TableHead>
+                          <TableHead>Class</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {students.map((student) => (
+                        {selectedBatch.students.map((student) => (
                       <TableRow key={student.id}>
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedStudents.includes(student.id)}
-                            onCheckedChange={(checked) => handleStudentSelect(student.id, checked as boolean)}
-                          />
-                        </TableCell>
-                        <TableCell className="font-medium">{student.studentId}</TableCell>
+                            <TableCell className="font-mono text-sm">{student.studentId}</TableCell>
                         <TableCell>{student.name}</TableCell>
-                        <TableCell>{student.class.className}</TableCell>
                         <TableCell>
-                          {student.batchId ? (
-                            <Badge variant="outline">
-                              {batches.find(b => b.id === student.batchId)?.batchName || 'Unknown'}
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">No Batch</Badge>
-                          )}
+                              <Badge variant="outline">{student.class.className}</Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={student.status === 'ACCEPTED' ? 'default' : 'secondary'}>
+                              <Badge className={getStatusColor(student.status)}>
                             {student.status}
                           </Badge>
                         </TableCell>
@@ -596,80 +738,23 @@ export default function StudentBatchManagement() {
                     ))}
                   </TableBody>
                 </Table>
+                  </div>
+                </div>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
 
-      {/* Assignment Dialog */}
-      <Dialog open={isAssignmentDialogOpen} onOpenChange={setIsAssignmentDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Assign Students to Batch</DialogTitle>
-            <DialogDescription>
-              Select a batch to assign {selectedStudents.length} selected students
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
+              {/* Description */}
+              {selectedBatch.description && (
             <div>
-              <Label htmlFor="batchSelect">Select Batch</Label>
-              <Select value={selectedBatch} onValueChange={setSelectedBatch}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a batch" />
-                </SelectTrigger>
-                <SelectContent>
-                  {batches.filter(batch => batch.status === 'ACTIVE').map((batch) => (
-                    <SelectItem key={batch.id} value={batch.id}>
-                      {batch.batchName} - {batch.academicYear} ({batch._count.students} students)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  <Label className="text-sm font-medium text-gray-500">Description</Label>
+                  <p className="text-gray-700">{selectedBatch.description}</p>
             </div>
-            {selectedStudents.length > 0 && (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  {selectedStudents.length} students will be assigned to the selected batch.
-                </AlertDescription>
-              </Alert>
             )}
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsAssignmentDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAssignStudents} disabled={!selectedBatch || selectedStudents.length === 0}>
-              Assign Students
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Unassignment Dialog */}
-      <Dialog open={isUnassignmentDialogOpen} onOpenChange={setIsUnassignmentDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Remove Students from Batch</DialogTitle>
-            <DialogDescription>
-              Remove {selectedStudents.length} selected students from their current batches
-            </DialogDescription>
-          </DialogHeader>
-          {selectedStudents.length > 0 && (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                {selectedStudents.length} students will be removed from their current batches.
-              </AlertDescription>
-            </Alert>
           )}
+          
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsUnassignmentDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleUnassignStudents} disabled={selectedStudents.length === 0}>
-              Remove from Batch
+            <Button variant="outline" onClick={() => setShowDetailsDialog(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

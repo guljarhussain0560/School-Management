@@ -70,6 +70,7 @@ model User {
   // Academic data
   markedAttendance Attendance[]
   createdAssignments Assignment[]
+  createdGrades Grade[]
   
   // Employee management
   createdEmployees Employee[]
@@ -129,6 +130,7 @@ model School {
   users              User[]   @relation("SchoolUsers")
   students           Student[]
   studentBatches     StudentBatch[]
+  grades             Grade[]
   classes            Class[]
   subjects           Subject[]
   subjectGrades      SubjectGrade[]
@@ -172,15 +174,16 @@ model StudentBatch {
   creator      User     @relation("BatchCreator", fields: [createdBy], references: [id])
   students     Student[]
   classes      Class[]
+  grades       Grade[]  // Grades within this batch
   feeStructures FeeStructure[]
 }
 
-model Class {
+model Grade {
   id           String   @id @default(cuid())
-  classCode    String   @unique // Generated class code (A5A, B10B, CNUR)
-  className    String   // e.g., "Class 1", "Grade 10", "Nursery"
+  gradeCode    String   @unique // Generated grade code (G01, G02, G10, etc.)
+  gradeName    String   // e.g., "Grade 1", "Grade 2", "Grade 10", "Nursery"
+  gradeLevel   Int      // Numeric level for sorting (1, 2, 3, etc.)
   description  String?
-  capacity     Int      @default(30)
   isActive     Boolean  @default(true)
   batchId      String
   schoolId     String
@@ -189,6 +192,34 @@ model Class {
   updatedAt    DateTime @updatedAt
   
   // Relations
+  batch        StudentBatch @relation(fields: [batchId], references: [id])
+  school       School       @relation(fields: [schoolId], references: [id])
+  creator      User         @relation(fields: [createdBy], references: [id])
+  sections     Class[]      // Sections within this grade
+  subjects     SubjectGrade[]
+  feeStructures FeeStructure[]
+  
+  @@unique([gradeCode, schoolId])
+  @@unique([gradeName, batchId, schoolId])
+}
+
+model Class {
+  id           String   @id @default(cuid())
+  classCode    String   @unique // Generated class code (G01A, G01B, G10GREEN, etc.)
+  sectionName  String   // e.g., "A", "B", "C", "Green", "Purple", "Orange"
+  sectionType  SectionType @default(LETTER) // LETTER, COLOR, NUMBER
+  description  String?
+  capacity     Int      @default(30)
+  isActive     Boolean  @default(true)
+  gradeId      String   // Reference to Grade instead of direct batch
+  batchId      String   // Keep for backward compatibility
+  schoolId     String
+  createdBy    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  grade        Grade    @relation(fields: [gradeId], references: [id])
   batch        StudentBatch @relation(fields: [batchId], references: [id])
   school       School       @relation(fields: [schoolId], references: [id])
   creator      User         @relation(fields: [createdBy], references: [id])
@@ -203,6 +234,7 @@ model Class {
   feeStructures FeeStructure[]
   
   @@unique([classCode, schoolId])
+  @@unique([sectionName, gradeId, schoolId])
 }
 
 model Subject {
@@ -232,6 +264,7 @@ model SubjectGrade {
   id        String   @id @default(cuid())
   subjectId String
   classId   String
+  gradeId   String   // Reference to Grade
   schoolId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -239,6 +272,7 @@ model SubjectGrade {
   // Relations
   subject   Subject @relation(fields: [subjectId], references: [id])
   class     Class   @relation(fields: [classId], references: [id])
+  grade     Grade   @relation(fields: [gradeId], references: [id])
   school    School  @relation(fields: [schoolId], references: [id])
   
   @@unique([subjectId, classId])
@@ -368,13 +402,13 @@ model Student {
   name         String
   email        String?
   age          Int
-  classId      String   // Reference to Class instead of grade string
+  classId      String   // Reference to Class (section within grade)
   rollNumber   String   @unique // Generated roll number (A5A24001, B10B24015)
   parentContact String?
   address      String?
   idProofUrl   String?
   busRouteId   String?
-  batchId      String?  // Reference to StudentBatch
+  batchId      String   // Reference to StudentBatch (required for proper batch assignment)
   schoolId     String
   createdBy    String
   createdAt    DateTime @default(now())
@@ -409,7 +443,7 @@ model Student {
   previousGrade      String?
   admissionDate      DateTime?
   admissionNumber    String?
-  academicYear       String?
+  academicYear       String? // Should match the academicYear of the assigned batch
   
   // Medical Information
   medicalConditions  String?
@@ -432,7 +466,7 @@ model Student {
   school       School       @relation(fields: [schoolId], references: [id])
   creator      User         @relation(fields: [createdBy], references: [id])
   busRoute     BusRoute?    @relation(fields: [busRouteId], references: [id])
-  batch        StudentBatch? @relation(fields: [batchId], references: [id])
+  batch        StudentBatch @relation(fields: [batchId], references: [id])
   class        Class        @relation(fields: [classId], references: [id])
   attendance   Attendance[]
   feePayments  FeeCollection[]
@@ -574,6 +608,7 @@ model FeeStructure {
   applicableFrom DateTime @default(now())
   applicableTo   DateTime?
   classId     String?  // If null, applies to all classes
+  gradeId     String?  // If null, applies to all grades
   batchId     String?  // If null, applies to all batches
   schoolId    String
   createdBy   String
@@ -582,6 +617,7 @@ model FeeStructure {
   
   // Relations
   class       Class?   @relation(fields: [classId], references: [id])
+  grade       Grade?   @relation(fields: [gradeId], references: [id])
   batch       StudentBatch? @relation(fields: [batchId], references: [id])
   school      School   @relation(fields: [schoolId], references: [id])
   creator     User     @relation(fields: [createdBy], references: [id])
@@ -870,7 +906,13 @@ enum BusStatus {
 enum BatchStatus {
   ACTIVE
   INACTIVE
-  ARCHIVED
+  COMPLETED
+}
+
+enum SectionType {
+  LETTER
+  COLOR
+  NUMBER
 }
 
 enum CalendarEventType {
