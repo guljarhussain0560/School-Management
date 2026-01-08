@@ -8,7 +8,7 @@ const testRegistration = async () => {
       body: JSON.stringify({
         name: 'Test Admin',
         email: 'admin@test.com',
-        password: 'TestPass123!',
+        password: process.env.TEST_PASSWORD || 'TestPassSecure2026!',
         schoolName: 'Test School',
         schoolRegNo: 'TEST-001',
         phone: '+1234567890',
