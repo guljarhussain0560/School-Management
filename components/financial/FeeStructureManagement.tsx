@@ -648,7 +648,7 @@ export default function FeeStructureManagement() {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Delete Fee Structure</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Are you sure you want to delete "{feeStructure.name}"? This action cannot be undone.
+                                Are you sure you want to delete &quot;{feeStructure.name}&quot;? This action cannot be undone.
                                 {feeStructure._count.collections > 0 && (
                                   <span className="block mt-2 text-red-600">
                                     This fee structure has {feeStructure._count.collections} collections and cannot be deleted.
