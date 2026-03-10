@@ -208,14 +208,14 @@ export default function OperationsTransport() {
   const handleEditBus = (bus: Bus) => {
     setEditingBus(bus);
     setBusForm({
-      busNumber: bus.busNumber,
+      route: 1,
       busName: bus.busName || '',
-      capacity: bus.capacity as 'SMALL' | 'MEDIUM' | 'LARGE',
+      capacity: (bus.capacity >= 50 ? 'LARGE' : bus.capacity >= 30 ? 'MEDIUM' : 'SMALL') as 'SMALL' | 'MEDIUM' | 'LARGE',
       driverName: bus.driverName || '',
       driverPhone: bus.driverPhone || '',
       conductorName: bus.conductorName || '',
       conductorPhone: bus.conductorPhone || '',
-      status: bus.status as 'ACTIVE'
+      status: 'ACTIVE'
     });
     setIsBusDialogOpen(true);
   };
@@ -538,7 +538,7 @@ export default function OperationsTransport() {
                     <Button onClick={() => {
                       setEditingBus(null);
                       setBusForm({
-                        busNumber: '',
+                        route: 1,
                         busName: '',
                         capacity: 'MEDIUM',
                         driverName: '',

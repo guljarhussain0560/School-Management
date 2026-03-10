@@ -754,8 +754,8 @@ export default function AttendanceManagement() {
                 <div className="text-sm text-blue-800 space-y-1">
                   <p><strong>Required Columns:</strong></p>
                   <ul className="list-disc list-inside ml-4 space-y-1">
-                    <li><code>Student ID</code> - Student's unique ID (e.g., STU001)</li>
-                    <li><code>Status</code> - Attendance status: "Present" or "Absent"</li>
+                    <li><code>Student ID</code> - Student&apos;s unique ID (e.g., STU001)</li>
+                    <li><code>Status</code> - Attendance status: &quot;Present&quot; or &quot;Absent&quot;</li>
                   </ul>
                   <p className="mt-2"><strong>Optional Columns:</strong></p>
                   <ul className="list-disc list-inside ml-4 space-y-1">
@@ -771,7 +771,7 @@ export default function AttendanceManagement() {
                 <div className="bg-green-50 p-4 rounded-lg">
                   <h4 className="font-medium text-green-900 mb-2">📥 Download Template</h4>
                   <p className="text-sm text-green-800 mb-3">
-                    Download a pre-filled Excel template with your selected grade's students
+                    Download a pre-filled Excel template with your selected grade&apos;s students
                   </p>
                   <Button
                     onClick={downloadExcelTemplate}

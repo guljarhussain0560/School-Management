@@ -107,7 +107,7 @@ export default function SystemSettings() {
             School Information
           </CardTitle>
           <CardDescription>
-            Update your school's basic information and contact details
+            Update your school&apos;s basic information and contact details
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
