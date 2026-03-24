@@ -61,10 +61,10 @@ export async function POST(request: NextRequest) {
         // Validate required fields
         const subject = row.subject || row.Subject
         const grade = row.grade || row.Grade
-        const module = row.module || row.Module
+        const curriculumModule = row.module || row.Module
         const progress = row.progress || row.Progress
 
-        if (!subject || !grade || !module || progress === undefined) {
+        if (!subject || !grade || !curriculumModule || progress === undefined) {
           results.errors++
           results.errorDetails.push(`Row ${i + 2}: Missing required fields (subject, grade, module, progress)`)
           continue
@@ -90,8 +90,8 @@ export async function POST(request: NextRequest) {
 
         const classRecord = await prisma.class.findFirst({
           where: {
-            className: {
-              contains: `Class ${String(grade)}`,
+            classCode: {
+              contains: String(grade),
               mode: 'insensitive'
             },
             schoolId: session.user.schoolId!
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
             subjectId_classId_module: {
               subjectId: subjectRecord.id,
               classId: classRecord.id,
-              module: String(module)
+              module: String(curriculumModule)
             }
           },
           update: {
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
           create: {
             subjectId: subjectRecord.id,
             classId: classRecord.id,
-            module: String(module),
+            module: String(curriculumModule),
             progress: progressNum,
             schoolId: session.user.schoolId ?? '',
             updatedBy: session.user.id

@@ -3,37 +3,43 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { IDService } from '@/lib/id-service'
+import { createEmployeeSchema, employeeQuerySchema } from '@/lib/validation/employee'
+import { logger } from '@/lib/logger'
+import { apiError } from '@/lib/api-handler'
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
     if (!session || session.user.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Unauthorized - Admin access required' },
-        { status: 403 }
-      )
+      logger.warn('Unauthorized employee list access attempt', { path: '/api/employee' })
+      return apiError('Unauthorized - Admin access required', 403)
     }
 
     const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '10')
-    const search = searchParams.get('search') || ''
-    const field = searchParams.get('field') || 'name'
-    const department = searchParams.get('department') || 'all'
-    const status = searchParams.get('status') || 'all'
+    const queryResult = employeeQuerySchema.safeParse({
+      page: searchParams.get('page') || '1',
+      limit: searchParams.get('limit') || '10',
+      search: searchParams.get('search') || '',
+      field: searchParams.get('field') || 'name',
+      department: searchParams.get('department') || 'all',
+      status: searchParams.get('status') || 'all',
+    })
 
-    // Calculate pagination
+    if (!queryResult.success) {
+      return apiError('Invalid query parameters', 400, queryResult.error.issues)
+    }
+
+    const { page, limit, search, field, department, status } = queryResult.data
     const skip = (page - 1) * limit
 
-    // Build where clause - handle null schoolId
+    // Build where clause
     const where: any = {}
     
     if (session.user.schoolId) {
       where.schoolId = session.user.schoolId
     } else {
-      // If user doesn't have a schoolId, show all employees (for admin setup)
-      console.log('⚠️ User has no schoolId, showing all employees')
+      logger.info('User has no schoolId, querying across all accessible employees', { userId: session.user.id })
     }
 
     // Add search filter
@@ -61,42 +67,38 @@ export async function GET(request: NextRequest) {
       where.status = status
     }
 
-    // Get total count for pagination
-    const totalCount = await prisma.employee.count({ where })
-
-    // Get employees with pagination
-    const employees = await prisma.employee.findMany({
-      where,
-      include: {
-        creator: {
-          select: {
-            name: true
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' },
-      skip,
-      take: limit
-    })
-
-    // Calculate summary statistics
-    const [totalEmployees, activeEmployees, inactiveEmployees, onLeaveEmployees, totalSalary] = await Promise.all([
-      prisma.employee.count({
-        where: session.user.schoolId ? { schoolId: session.user.schoolId } : {}
+    // Execute queries in parallel
+    const [totalCount, employees, totalEmployees, activeEmployees, inactiveEmployees, onLeaveEmployees, totalSalary] = await Promise.all([
+      prisma.employee.count({ where }),
+      prisma.employee.findMany({
+        where,
+        include: {
+          creator: {
+            select: {
+              name: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
       }),
       prisma.employee.count({
-        where: session.user.schoolId ? { schoolId: session.user.schoolId, status: 'ACTIVE' } : { status: 'ACTIVE' }
+        where: session.user.schoolId ? { schoolId: session.user.schoolId } : {},
       }),
       prisma.employee.count({
-        where: session.user.schoolId ? { schoolId: session.user.schoolId, status: 'INACTIVE' } : { status: 'INACTIVE' }
+        where: session.user.schoolId ? { schoolId: session.user.schoolId, status: 'ACTIVE' } : { status: 'ACTIVE' },
       }),
       prisma.employee.count({
-        where: session.user.schoolId ? { schoolId: session.user.schoolId, status: 'ON_LEAVE' } : { status: 'ON_LEAVE' }
+        where: session.user.schoolId ? { schoolId: session.user.schoolId, status: 'INACTIVE' } : { status: 'INACTIVE' },
+      }),
+      prisma.employee.count({
+        where: session.user.schoolId ? { schoolId: session.user.schoolId, status: 'ON_LEAVE' } : { status: 'ON_LEAVE' },
       }),
       prisma.employee.aggregate({
         where: session.user.schoolId ? { schoolId: session.user.schoolId, status: 'ACTIVE' } : { status: 'ACTIVE' },
-        _sum: { salary: true }
-      })
+        _sum: { salary: true },
+      }),
     ])
 
     const summary = {
@@ -104,10 +106,9 @@ export async function GET(request: NextRequest) {
       activeEmployees,
       inactiveEmployees,
       onLeaveEmployees,
-      totalSalary: Number(totalSalary._sum.salary || 0)
+      totalSalary: Number(totalSalary._sum.salary || 0),
     }
 
-    // Calculate pagination info
     const totalPages = Math.ceil(totalCount / limit)
 
     return NextResponse.json({
@@ -119,16 +120,12 @@ export async function GET(request: NextRequest) {
         totalCount,
         limit,
         hasNextPage: page < totalPages,
-        hasPrevPage: page > 1
-      }
+        hasPrevPage: page > 1,
+      },
     })
-
   } catch (error) {
-    console.error('Get employees error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    logger.error('Get employees error', error, { path: '/api/employee' })
+    return apiError('Internal server error', 500)
   }
 }
 
@@ -137,103 +134,85 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions)
     
     if (!session || session.user.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Unauthorized - Admin access required' },
-        { status: 403 }
-      )
+      logger.warn('Unauthorized employee creation attempt', { path: '/api/employee' })
+      return apiError('Unauthorized - Admin access required', 403)
     }
 
     const body = await request.json()
-    const {
-      name,
-      email,
-      phone,
-      address,
-      dateOfBirth,
-      department,
-      position,
-      salary,
-      emergencyContact,
-      emergencyPhone,
-      qualifications,
-      experience,
-      bankAccount,
-      ifscCode,
-      panNumber,
-      aadharNumber,
-      notes
-    } = body
+    const validationResult = createEmployeeSchema.safeParse(body)
 
-    // Validation
-    if (!name || !email || !department || !position || !salary) {
-      return NextResponse.json(
-        { error: 'Name, email, department, position, and salary are required' },
-        { status: 400 }
-      )
+    if (!validationResult.success) {
+      return apiError('Validation failed', 400, validationResult.error.issues)
     }
+
+    const data = validationResult.data
 
     // Check if email already exists
     const existingEmployee = await prisma.employee.findUnique({
-      where: { email }
+      where: { email: data.email },
     })
 
     if (existingEmployee) {
-      return NextResponse.json(
-        { error: 'Employee with this email already exists' },
-        { status: 400 }
-      )
+      return apiError('Employee with this email already exists', 400)
     }
 
+    const schoolId = session.user.schoolId || 'default-school'
+
     // Initialize ID service with school configuration
-    await IDService.initializeSchool(session.user.schoolId!)
+    await IDService.initializeSchool(schoolId)
 
     // Determine role based on department/position
     let role: 'ADMIN' | 'TEACHER' | 'TRANSPORT' = 'TEACHER'
-    if (department.toLowerCase().includes('admin') || position.toLowerCase().includes('admin')) {
+    if (data.department.toLowerCase().includes('admin') || data.position.toLowerCase().includes('admin')) {
       role = 'ADMIN'
-    } else if (department.toLowerCase().includes('transport') || position.toLowerCase().includes('transport')) {
+    } else if (data.department.toLowerCase().includes('transport') || data.position.toLowerCase().includes('transport')) {
       role = 'TRANSPORT'
     }
 
     // Generate unique employee ID
-    const employeeId = await IDService.generateEmployeeId(role, session.user.schoolId!)
+    const employeeId = await IDService.generateEmployeeId(role, schoolId)
 
     // Create employee record
     const employee = await prisma.employee.create({
       data: {
         employeeId,
-        name,
-        email,
-        phone,
-        address,
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
-        department,
-        position,
-        salary: parseFloat(salary),
-        emergencyContact,
-        emergencyPhone,
-        qualifications,
-        experience,
-        bankAccount,
-        ifscCode,
-        panNumber,
-        aadharNumber,
-        notes,
+        name: data.name,
+        email: data.email,
+        phone: data.phone || null,
+        address: data.address || null,
+        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+        department: data.department,
+        position: data.position,
+        salary: data.salary,
+        emergencyContact: data.emergencyContact || null,
+        emergencyPhone: data.emergencyPhone || null,
+        qualifications: data.qualifications || null,
+        experience: data.experience || null,
+        bankAccount: data.bankAccount || null,
+        ifscCode: data.ifscCode || null,
+        panNumber: data.panNumber || null,
+        aadharNumber: data.aadharNumber || null,
+        notes: data.notes || null,
         createdBy: session.user.id,
-        schoolId: session.user.schoolId!,
-      }
+        schoolId,
+      },
     })
 
-    return NextResponse.json({
-      message: 'Employee registered successfully',
-      employee
-    }, { status: 201 })
+    logger.info('Employee created successfully', {
+      employeeId: employee.employeeId,
+      schoolId,
+      createdById: session.user.id,
+    })
 
-  } catch (error) {
-    console.error('Create employee error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      {
+        message: 'Employee registered successfully',
+        employee,
+      },
+      { status: 201 }
     )
+  } catch (error) {
+    logger.error('Create employee error', error, { path: '/api/employee' })
+    return apiError('Internal server error', 500)
   }
 }

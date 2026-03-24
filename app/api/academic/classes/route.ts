@@ -1,43 +1,44 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { IDService } from '@/lib/id-service';
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { IDService } from '@/lib/id-service'
+import { createClassSchema } from '@/lib/validation/academic'
+import { logger } from '@/lib/logger'
+import { apiError } from '@/lib/api-handler'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions)
     
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return apiError('Unauthorized', 401)
     }
 
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const batchId = searchParams.get('batchId');
-    const search = searchParams.get('search') || '';
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const batchId = searchParams.get('batchId')
+    const search = searchParams.get('search') || ''
 
-    const skip = (page - 1) * limit;
+    const skip = (page - 1) * limit
+    const schoolId = session.user.schoolId || 'default-school'
 
     // Build where clause
     const where: any = {
-      schoolId: session.user.schoolId!
-    };
+      schoolId,
+    }
 
     if (batchId && batchId !== 'all') {
-      where.batchId = batchId;
+      where.batchId = batchId
     }
 
     if (search) {
       where.OR = [
-        { className: { contains: search, mode: 'insensitive' } },
         { classCode: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
-      ];
+        { sectionName: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ]
     }
 
     const [classes, totalCount] = await Promise.all([
@@ -45,45 +46,34 @@ export async function GET(request: NextRequest) {
         where,
         skip,
         take: limit,
-        orderBy: { className: 'asc' },
+        orderBy: { classCode: 'asc' },
         include: {
           batch: {
             select: {
               id: true,
               batchName: true,
-              academicYear: true
-            }
+              academicYear: true,
+            },
           },
           creator: {
             select: {
               id: true,
               name: true,
-              email: true
-            }
-          },
-          subjects: {
-            include: {
-              subject: {
-                select: {
-                  id: true,
-                  subjectName: true,
-                  subjectCode: true
-                }
-              }
-            }
+              email: true,
+            },
           },
           _count: {
             select: {
               students: true,
-              subjects: true
-            }
-          }
-        }
+              subjects: true,
+            },
+          },
+        },
       }),
-      prisma.class.count({ where })
-    ]);
+      prisma.class.count({ where }),
+    ])
 
-    const totalPages = Math.ceil(totalCount / limit);
+    const totalPages = Math.ceil(totalCount / limit)
 
     return NextResponse.json({
       classes,
@@ -91,125 +81,129 @@ export async function GET(request: NextRequest) {
         currentPage: page,
         totalPages,
         totalCount,
-        limit
-      }
-    });
-
+        limit,
+      },
+    })
   } catch (error) {
-    console.error('Error fetching classes:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch classes' },
-      { status: 500 }
-    );
+    logger.error('Error fetching classes', error, { path: '/api/academic/classes' })
+    return apiError('Failed to fetch classes', 500)
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions)
     
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return apiError('Unauthorized', 401)
+    }
+
+    const body = await request.json()
+    const validationResult = createClassSchema.safeParse(body)
+
+    if (!validationResult.success) {
+      return apiError('Validation failed', 400, validationResult.error.issues)
     }
 
     const {
-      className,
       level,
       section,
       description,
-      capacity = 30,
-      batchId
-    } = await request.json();
+      capacity,
+      batchId,
+    } = validationResult.data
 
-    if (!className || !level || !section || !batchId) {
-      return NextResponse.json(
-        { error: 'Class name, level, section, and batch are required' },
-        { status: 400 }
-      );
-    }
+    const schoolId = session.user.schoolId || 'default-school'
 
     // Get batch information
     const batch = await prisma.studentBatch.findUnique({
       where: { id: batchId },
-      select: { batchCode: true }
-    });
+      select: { id: true, batchCode: true },
+    })
 
     if (!batch) {
-      return NextResponse.json(
-        { error: 'Invalid batch ID' },
-        { status: 400 }
-      );
+      return apiError('Invalid batch ID', 400)
     }
 
     // Initialize ID service with school configuration
-    await IDService.initializeSchool(session.user.schoolId!);
+    await IDService.initializeSchool(schoolId)
 
     // Generate unique class code
-    const classCode = await IDService.generateClassCode(batch.batchCode, level, section, session.user.schoolId!);
+    const classCode = await IDService.generateClassCode(batch.batchCode, level, section, schoolId)
+
+    // Ensure grade exists or find matching grade
+    let grade = await prisma.grade.findFirst({
+      where: {
+        batchId,
+        schoolId,
+      },
+    })
+
+    if (!grade) {
+      grade = await prisma.grade.create({
+        data: {
+          gradeCode: `G${level}`,
+          gradeName: `Grade ${level}`,
+          gradeLevel: parseInt(level) || 1,
+          batchId,
+          schoolId,
+          createdBy: session.user.id,
+        },
+      })
+    }
 
     // Check if class already exists in the same batch
     const existingClass = await prisma.class.findFirst({
       where: {
-        className,
-        batchId,
-        schoolId: session.user.schoolId!
-      }
-    });
+        classCode,
+        schoolId,
+      },
+    })
 
     if (existingClass) {
-      return NextResponse.json(
-        { error: 'Class already exists in this batch' },
-        { status: 400 }
-      );
+      return apiError('Class already exists in this batch', 400)
     }
 
     const newClass = await prisma.class.create({
       data: {
-        className,
         classCode,
+        sectionName: section,
         description: description || null,
         capacity,
+        gradeId: grade.id,
         batchId,
-        schoolId: session.user.schoolId!,
-        createdBy: session.user.id
+        schoolId,
+        createdBy: session.user.id,
       },
       include: {
         batch: {
           select: {
             id: true,
             batchName: true,
-            academicYear: true
-          }
+            academicYear: true,
+          },
         },
         creator: {
           select: {
             id: true,
             name: true,
-            email: true
-          }
+            email: true,
+          },
         },
-        _count: {
-          select: {
-            students: true,
-            subjects: true
-          }
-        }
-      }
-    });
+      },
+    })
+
+    logger.info('Class created successfully', {
+      classCode: newClass.classCode,
+      schoolId,
+    })
 
     return NextResponse.json({
       message: 'Class created successfully',
-      class: newClass
-    });
-
+      class: newClass,
+    })
   } catch (error) {
-    console.error('Error creating class:', error);
-    return NextResponse.json(
-      { error: 'Failed to create class' },
-      { status: 500 }
-    );
+    logger.error('Error creating class', error, { path: '/api/academic/classes' })
+    return apiError('Failed to create class', 500)
   }
 }
