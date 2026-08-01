@@ -173,7 +173,7 @@ export default function TeacherAssignments() {
   const filteredAssignments = assignments.filter(assignment => {
     const matchesSearch = assignment.teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          assignment.subject.subjectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         assignment.class.className.toLowerCase().includes(searchTerm.toLowerCase())
+                         ((assignment.class as any)?.className || (assignment.class as any)?.classCode || "N/A").toLowerCase().includes(searchTerm.toLowerCase())
     const matchesSubject = subjectFilter === 'all' || assignment.subject.id === subjectFilter
     const matchesClass = classFilter === 'all' || assignment.class.id === classFilter
 
@@ -264,7 +264,7 @@ export default function TeacherAssignments() {
                     <SelectContent>
                       {classes.map((classItem: any) => (
                         <SelectItem key={classItem.id} value={classItem.id}>
-                          {classItem.className}
+                          {(classItem?.classCode || classItem?.sectionName || "N/A")}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -318,7 +318,7 @@ export default function TeacherAssignments() {
               <SelectItem value="all">All Classes</SelectItem>
               {classes.map((classItem: any) => (
                 <SelectItem key={classItem.id} value={classItem.id}>
-                  {classItem.className}
+                  {(classItem?.classCode || classItem?.sectionName || "N/A")}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -354,7 +354,7 @@ export default function TeacherAssignments() {
                       <Badge variant="outline">{assignment.subject.subjectName}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{assignment.class.className}</Badge>
+                      <Badge variant="secondary">{((assignment.class as any)?.className || (assignment.class as any)?.classCode || "N/A")}</Badge>
                     </TableCell>
                     <TableCell>{assignment.teacher.email}</TableCell>
                     <TableCell className="text-right">
@@ -368,7 +368,7 @@ export default function TeacherAssignments() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Delete Teacher Assignment</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to remove {assignment.teacher.name} from teaching {assignment.subject.subjectName} in {assignment.class.className}? This action cannot be undone.
+                              Are you sure you want to remove {assignment.teacher.name} from teaching {assignment.subject.subjectName} in {((assignment.class as any)?.className || (assignment.class as any)?.classCode || "N/A")}? This action cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>

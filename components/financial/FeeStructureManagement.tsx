@@ -435,7 +435,7 @@ export default function FeeStructureManagement() {
                         <SelectItem value="all">All Classes</SelectItem>
                         {classes.map((classItem) => (
                           <SelectItem key={classItem.id} value={classItem.id}>
-                            {classItem.className}
+                            {((classItem as any)?.classCode || (classItem as any)?.className || "N/A")}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -555,7 +555,7 @@ export default function FeeStructureManagement() {
               <SelectItem value="all">All Classes</SelectItem>
               {classes.map((classItem) => (
                 <SelectItem key={classItem.id} value={classItem.id}>
-                  {classItem.className}
+                  {((classItem as any)?.classCode || (classItem as any)?.sectionName || "N/A")}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -610,7 +610,7 @@ export default function FeeStructureManagement() {
                     <TableCell>
                       {feeStructure.class ? (
                         <div className="text-sm">
-                          <div className="font-medium">{feeStructure.class.className}</div>
+                          <div className="font-medium">{((feeStructure.class as any)?.classCode || (feeStructure.class as any)?.sectionName || "N/A")}</div>
                           {feeStructure.batch && (
                             <div className="text-muted-foreground">{feeStructure.batch.batchName}</div>
                           )}

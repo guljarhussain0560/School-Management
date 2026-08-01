@@ -248,7 +248,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
                               <div>
                                 <h3 className="font-semibold">{student.name}</h3>
                                 <p className="text-sm text-gray-600">ID: {student.studentId}</p>
-                                <p className="text-sm text-gray-600">Class: {student.class?.className}</p>
+                                <p className="text-sm text-gray-600">Class: {student.class?.classCode}</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
@@ -286,7 +286,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
                     <Card key={cls.id} className="p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h3 className="font-semibold">{cls.className}</h3>
+                          <h3 className="font-semibold">{(cls.classCode || (cls as any).className || "N/A")}</h3>
                           <p className="text-sm text-gray-600">Code: {cls.classCode}</p>
                           <p className="text-sm text-gray-600">Students: {cls._count?.students || 0}</p>
                         </div>

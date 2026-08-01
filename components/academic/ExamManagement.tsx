@@ -224,7 +224,7 @@ const ExamManagement: React.FC = () => {
       options: subjects.map(s => ({ value: s.id, label: s.subjectName }))
     },
     { name: 'classId', label: 'Class', type: 'select' as const, required: true,
-      options: classes.map(c => ({ value: c.id, label: c.className }))
+      options: classes.map(c => ({ value: c.id, label: ((c as any)?.classCode || (c as any).className || "N/A") }))
     },
     { name: 'totalMarks', label: 'Total Marks', type: 'number' as const, required: true, placeholder: '100' },
     { name: 'passingMarks', label: 'Passing Marks', type: 'number' as const, required: true, placeholder: '40' },
@@ -310,9 +310,9 @@ const ExamManagement: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Classes</SelectItem>
-                  {classes.map(classItem => (
+                  {classes.map((classItem) => (
                     <SelectItem key={classItem.id} value={classItem.id}>
-                      {classItem.className}
+                      {((classItem as any)?.classCode || (classItem as any)?.className || "N/A")}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -354,7 +354,7 @@ const ExamManagement: React.FC = () => {
                       <Badge variant="outline">{exam.examType}</Badge>
                     </TableCell>
                     <TableCell>{exam.subject.subjectName}</TableCell>
-                    <TableCell>{exam.class.className}</TableCell>
+                    <TableCell>{((exam.class as any)?.className || (exam.class as any)?.classCode || "N/A")}</TableCell>
                     <TableCell>{exam.passingMarks}/{exam.totalMarks}</TableCell>
                     <TableCell>{exam.duration} min</TableCell>
                     <TableCell>
@@ -460,7 +460,7 @@ const ExamManagement: React.FC = () => {
                 <div className="flex items-center gap-4">
                   <Badge variant="outline">{selectedExam.examType}</Badge>
                   <span className="text-sm text-gray-600">
-                    {selectedExam.subject.subjectName} - {selectedExam.class.className}
+                    {selectedExam.subject.subjectName} - {((selectedExam.class as any)?.classCode || (selectedExam.class as any)?.className || "N/A")}
                   </span>
                 </div>
                 <div className="flex gap-2">

@@ -352,7 +352,7 @@ export default function FeeCollectionManagement() {
                         <SelectContent>
                           {students.map((student) => (
                             <SelectItem key={student.id} value={student.id}>
-                              {student.name} ({student.studentId}) - {student.class.className}
+                              {student.name} ({student.studentId}) - {(student.class?.classCode || (student.class as any)?.className || "N/A")}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -499,7 +499,7 @@ export default function FeeCollectionManagement() {
                         <div>
                           <div className="font-medium">{collection.student.name}</div>
                           <div className="text-sm text-muted-foreground">
-                            {collection.student.studentId} - {collection.student.class.className}
+                            {collection.student.studentId} - {collection.student.class?.classCode || 'N/A'}
                           </div>
                         </div>
                       </TableCell>

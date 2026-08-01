@@ -238,7 +238,7 @@ export default function StudentFeeDetails({ studentId: propStudentId }: StudentF
                 <Calendar className="h-8 w-8 text-green-600" />
                 <div>
                   <p className="text-sm text-muted-foreground">Class</p>
-                  <p className="font-semibold">{student.class.className}</p>
+                  <p className="font-semibold">{(student.class?.classCode || (student.class as any)?.className || "N/A")}</p>
                   {student.batch && (
                     <p className="text-sm text-muted-foreground">{student.batch.batchName}</p>
                   )}

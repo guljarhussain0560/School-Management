@@ -692,7 +692,7 @@ export default function StudentBatchManagement() {
                         <CardContent className="p-4">
                           <div className="flex justify-between items-center">
                             <div>
-                              <p className="font-medium">{cls.className}</p>
+                              <p className="font-medium">{(cls.classCode || (cls as any).className || "N/A")}</p>
                               <p className="text-sm text-gray-600">{cls.classCode}</p>
                             </div>
                             <div className="text-right">
@@ -727,7 +727,7 @@ export default function StudentBatchManagement() {
                             <TableCell className="font-mono text-sm">{student.studentId}</TableCell>
                         <TableCell>{student.name}</TableCell>
                         <TableCell>
-                              <Badge variant="outline">{student.class.className}</Badge>
+                              <Badge variant="outline">{(student.class?.classCode || (student.class as any)?.className || "N/A")}</Badge>
                         </TableCell>
                         <TableCell>
                               <Badge className={getStatusColor(student.status)}>

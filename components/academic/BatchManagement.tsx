@@ -708,7 +708,7 @@ const BatchManagement: React.FC<BatchManagementProps> = ({
                         <CardContent className="p-4">
                           <div className="flex justify-between items-center">
                             <div>
-                              <p className="font-medium">{cls.className}</p>
+                              <p className="font-medium">{(cls.classCode || (cls as any).className || "N/A")}</p>
                               <p className="text-sm text-gray-600">{cls.classCode}</p>
                             </div>
                             <div className="text-right">
