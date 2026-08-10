@@ -56,31 +56,16 @@ export async function GET(request: NextRequest) {
         ],
         include: {
           grade: {
-            select: {
-              id: true,
-              gradeName: true,
-              gradeCode: true,
-              gradeLevel: true
-            }
+            select: { id: true, gradeName: true, gradeCode: true, gradeLevel: true }
           },
           batch: {
-            select: {
-              id: true,
-              batchName: true,
-              academicYear: true
-            }
+            select: { id: true, batchName: true, academicYear: true }
           },
           creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
+            select: { id: true, name: true, email: true }
           },
           _count: {
-            select: {
-              students: true
-            }
+            select: { students: true }
           }
         }
       }),
@@ -202,31 +187,16 @@ export async function POST(request: NextRequest) {
       },
       include: {
         grade: {
-          select: {
-            id: true,
-            gradeName: true,
-            gradeCode: true,
-            gradeLevel: true
-          }
+          select: { id: true, gradeName: true, gradeCode: true, gradeLevel: true }
         },
         batch: {
-          select: {
-            id: true,
-            batchName: true,
-            academicYear: true
-          }
+          select: { id: true, batchName: true, academicYear: true }
         },
         creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         },
         _count: {
-          select: {
-            students: true
-          }
+          select: { students: true }
         }
       }
     });

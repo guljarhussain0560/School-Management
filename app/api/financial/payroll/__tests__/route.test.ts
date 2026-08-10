@@ -10,22 +10,23 @@ vi.mock('next-auth', () => ({
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
-    bus: {
+    payroll: {
       findMany: vi.fn(),
       count: vi.fn(),
+      aggregate: vi.fn(),
     },
   },
 }))
 
-describe('/api/operations/buses Route Handler', () => {
+describe('/api/financial/payroll Route Handler', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('returns 401 when session is unauthenticated', async () => {
+  it('returns 401 when session is not authenticated', async () => {
     vi.mocked(getServerSession).mockResolvedValue(null)
 
-    const req = new NextRequest('http://localhost:3000/api/operations/buses')
+    const req = new NextRequest('http://localhost:3000/api/financial/payroll')
     const res = await GET(req)
     const data = await res.json()
 
@@ -33,23 +34,23 @@ describe('/api/operations/buses Route Handler', () => {
     expect(data.error).toBe('Unauthorized')
   })
 
-  it('returns list of fleet buses for authenticated school', async () => {
+  it('returns payroll records when authenticated with ADMIN role', async () => {
     vi.mocked(getServerSession).mockResolvedValue({
       user: { id: 'usr-1', role: 'ADMIN', schoolId: 'school-1' },
     } as any)
 
-    const mockBuses = [
-      { id: 'b1', busNumber: 'BUS-01', busName: 'Yellow Express', capacity: 40, status: 'ACTIVE' },
+    const mockPayroll = [
+      { id: 'p1', payrollId: 'PAY001', month: 'January', year: 2026, netSalary: 50000, status: 'PAID' },
     ]
 
-    vi.mocked(prisma.bus.findMany).mockResolvedValue(mockBuses as any)
+    vi.mocked(prisma.payroll.findMany).mockResolvedValue(mockPayroll as any)
+    vi.mocked(prisma.payroll.count).mockResolvedValue(1)
 
-    const req = new NextRequest('http://localhost:3000/api/operations/buses')
+    const req = new NextRequest('http://localhost:3000/api/financial/payroll?page=1&limit=10')
     const res = await GET(req)
     const data = await res.json()
 
     expect(res.status).toBe(200)
-    expect(data.buses).toHaveLength(1)
-    expect(data.buses[0].busNumber).toBe('BUS-01')
+    expect(data.payrolls).toHaveLength(1)
   })
 })

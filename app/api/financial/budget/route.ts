@@ -158,9 +158,7 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         creator: {
-          select: {
-            name: true
-          }
+          select: { name: true }
         }
       },
       orderBy: { createdAt: 'desc' },

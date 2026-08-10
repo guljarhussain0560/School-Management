@@ -19,17 +19,9 @@ export async function GET(request: NextRequest) {
       where: {
         schoolId: session.user.schoolId!
       },
-      select: {
-        id: true,
-        studentId: true,
-        name: true,
-        rollNumber: true,
-        admissionNumber: true,
-        class: {
+      select: { id: true, studentId: true, name: true, rollNumber: true, admissionNumber: true, class: {
           select: {
-            className: true,
-            classCode: true
-          }
+            classCode: true, sectionName: true }
         }
       },
       orderBy: {

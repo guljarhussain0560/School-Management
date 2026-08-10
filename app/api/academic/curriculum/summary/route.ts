@@ -34,19 +34,12 @@ export async function GET(request: NextRequest) {
     // Get curriculum progress data
     const curriculumData = await prisma.curriculumProgress.findMany({
       where,
-      select: {
-        module: true,
-        progress: true,
-        updatedAt: true,
-        subject: {
+      select: { module: true, progress: true, updatedAt: true, subject: {
           select: {
-            subjectName: true
-          }
+            subjectName: true }
         },
         class: {
-          select: {
-            className: true
-          }
+          select: { classCode: true, sectionName: true }
         }
       },
       orderBy: {
@@ -77,7 +70,7 @@ export async function GET(request: NextRequest) {
 
       // Group by grade
       curriculumData.forEach(item => {
-        const gradeName = item.class.className;
+        const gradeName = (item.class?.classCode || item.class?.sectionName || "N/A");
         if (!summary.byGrade[gradeName]) {
           summary.byGrade[gradeName] = {
             totalModules: 0,

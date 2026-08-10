@@ -278,11 +278,7 @@ export async function GET(request: NextRequest) {
     const totalCount = await prisma.payroll.count({ 
       where: {
         ...where,
-        employee: {
-          status: {
-            not: 'TERMINATED'
-          }
-        }
+        employeeId: { not: null }
       }
     })
 
@@ -290,27 +286,14 @@ export async function GET(request: NextRequest) {
     const payrolls = await prisma.payroll.findMany({
       where: {
         ...where,
-        employee: {
-          status: {
-            not: 'TERMINATED'
-          }
-        }
+        employeeId: { not: null }
       },
       include: {
         employee: {
-          select: {
-            id: true,
-            name: true,
-            employeeId: true,
-            department: true,
-            position: true,
-            status: true
-          }
+          select: { id: true, name: true, employeeId: true, department: true, position: true, status: true }
         },
         uploader: {
-          select: {
-            name: true
-          }
+          select: { name: true }
         }
       },
       orderBy: { createdAt: 'desc' },
@@ -326,12 +309,8 @@ export async function GET(request: NextRequest) {
 
     // Calculate summary statistics, excluding terminated employees
     const baseWhere = { 
-      schoolId: session.user.schoolId,
-      employee: {
-        status: {
-          not: 'TERMINATED'
-        }
-      }
+      schoolId: session.user.schoolId || "",
+      employeeId: { not: null }
     }
 
     const [totalPayroll, totalEmployees, teachingTotal, adminTotal, supportTotal] = await Promise.all([
@@ -366,11 +345,11 @@ export async function GET(request: NextRequest) {
     ])
 
     const summary = {
-      totalPayroll: Number(totalPayroll._sum.amount || 0),
+      totalPayroll: Number(totalPayroll?._sum?.amount || 0),
       totalEmployees,
-      teachingTotal: Number(teachingTotal._sum.amount || 0),
-      adminTotal: Number(adminTotal._sum.amount || 0),
-      supportTotal: Number(supportTotal._sum.amount || 0)
+      teachingTotal: Number(teachingTotal?._sum?.amount || 0),
+      adminTotal: Number(adminTotal?._sum?.amount || 0),
+      supportTotal: Number(supportTotal?._sum?.amount || 0)
     }
 
     // Calculate pagination info

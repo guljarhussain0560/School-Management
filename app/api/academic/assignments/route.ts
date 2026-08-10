@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { z } from 'zod'
+
+const createAssignmentSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  grade: z.string().min(1, 'Grade is required'),
+  subject: z.string().min(1, 'Subject is required'),
+  dueDate: z.string().refine(val => !isNaN(Date.parse(val)), 'Invalid due date'),
+  description: z.string().optional(),
+  fileUrl: z.string().optional(),
+})
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,19 +25,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { title, grade, subject, dueDate, description, fileUrl } = body
-
-    console.log('Assignment data received:', { title, grade, subject, dueDate, description, fileUrl })
-
-    // Validate required fields
-    if (!title || !grade || !subject || !dueDate) {
+    const parsed = createAssignmentSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Title, grade, subject, and due date are required' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
 
-    // Validate due date is in the future
+    const { title, grade, subject, dueDate, description } = parsed.data
+
     const dueDateObj = new Date(dueDate)
     if (dueDateObj <= new Date()) {
       return NextResponse.json(
@@ -36,7 +43,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create assignment
     // Find subject and class
     const subjectRecord = await prisma.subject.findFirst({
       where: {
@@ -46,34 +52,34 @@ export async function POST(request: NextRequest) {
         },
         schoolId: session.user.schoolId!
       }
-    });
+    })
 
     const classRecord = await prisma.class.findFirst({
       where: {
-        className: {
-          contains: `Class ${grade}`,
-          mode: 'insensitive'
-        },
+        OR: [
+          { classCode: { contains: grade, mode: 'insensitive' } },
+          { grade: { gradeName: { contains: grade, mode: 'insensitive' } } }
+        ],
         schoolId: session.user.schoolId!
       }
-    });
+    })
 
     if (!subjectRecord) {
       return NextResponse.json(
         { error: `Subject '${subject}' not found` },
         { status: 400 }
-      );
+      )
     }
 
     if (!classRecord) {
       return NextResponse.json(
         { error: `Class '${grade}' not found` },
         { status: 400 }
-      );
+      )
     }
 
     // Generate assignment ID
-    const assignmentId = `ASG${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+    const assignmentId = `ASG${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`
 
     const assignment = await prisma.assignment.create({
       data: {
@@ -88,9 +94,7 @@ export async function POST(request: NextRequest) {
       },
       include: {
         creator: {
-          select: {
-            name: true
-          }
+          select: { name: true }
         }
       }
     })
@@ -101,12 +105,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error creating assignment:', error)
-    console.error('Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      code: (error as any)?.code,
-      meta: (error as any)?.meta
-    })
     return NextResponse.json(
       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -135,7 +133,6 @@ export async function GET(request: NextRequest) {
 
     const skip = (page - 1) * limit
 
-    // Build where clause
     const where: any = {
       schoolId: session.user.schoolId
     }
@@ -149,10 +146,10 @@ export async function GET(request: NextRequest) {
 
     if (grade) {
       where.class = {
-        className: {
-          contains: grade,
-          mode: 'insensitive'
-        }
+        OR: [
+          { classCode: { contains: grade, mode: 'insensitive' } },
+          { grade: { gradeName: { contains: grade, mode: 'insensitive' } } }
+        ]
       }
     }
 
@@ -169,23 +166,17 @@ export async function GET(request: NextRequest) {
       where.status = status
     }
 
-    // Get assignments with pagination
     const [assignments, total] = await Promise.all([
       prisma.assignment.findMany({
         where,
         include: {
           creator: {
-            select: {
-              name: true
-            }
+            select: { name: true }
           },
           students: {
             include: {
               student: {
-                select: {
-                  name: true,
-                  studentId: true
-                }
+                select: { name: true, studentId: true }
               }
             }
           }
@@ -212,7 +203,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error fetching assignments:', error)
     return NextResponse.json(
       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

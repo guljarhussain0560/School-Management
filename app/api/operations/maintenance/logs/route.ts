@@ -49,11 +49,7 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           reporter: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
+            select: { id: true, name: true, email: true }
           }
         },
         orderBy: {
@@ -124,11 +120,7 @@ export async function POST(request: NextRequest) {
       },
       include: {
         reporter: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         }
       }
     })

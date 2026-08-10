@@ -54,8 +54,7 @@ export async function GET(request: NextRequest) {
 
     if (grade) {
       where.class = {
-        className: {
-          contains: grade,
+        classCode: { contains: grade,
           mode: 'insensitive'
         }
       };
@@ -69,12 +68,7 @@ export async function GET(request: NextRequest) {
         orderBy: { name: 'asc' },
         include: {
           batch: {
-            select: {
-              id: true,
-              batchName: true,
-              academicYear: true,
-              status: true
-            }
+            select: { id: true, batchName: true, academicYear: true, status: true }
           }
         }
       }),

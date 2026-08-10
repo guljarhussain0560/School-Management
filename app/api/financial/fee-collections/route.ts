@@ -44,32 +44,17 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         student: {
-          select: {
-            id: true,
-            name: true,
-            studentId: true,
-            class: {
+          select: { id: true, name: true, studentId: true, class: {
               select: {
-                className: true,
-                classCode: true
-              }
+                classCode: true, sectionName: true }
             }
           }
         },
         feeStructure: {
-          select: {
-            id: true,
-            name: true,
-            feeCode: true,
-            category: true
-          }
+          select: { id: true, name: true, feeCode: true, category: true }
         },
         collector: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         }
       },
       orderBy: {
@@ -152,7 +137,7 @@ export async function POST(request: NextRequest) {
 
     // Generate fee collection ID
     const feeCount = await prisma.feeCollection.count({
-      where: { schoolId: session.user.schoolId }
+      where: { schoolId: session.user.schoolId || '' }
     })
     const feeId = `FEE${String(feeCount + 1).padStart(6, '0')}`
 
@@ -170,32 +155,17 @@ export async function POST(request: NextRequest) {
       },
       include: {
         student: {
-          select: {
-            id: true,
-            name: true,
-            studentId: true,
-            class: {
+          select: { id: true, name: true, studentId: true, class: {
               select: {
-                className: true,
-                classCode: true
-              }
+                classCode: true, sectionName: true }
             }
           }
         },
         feeStructure: {
-          select: {
-            id: true,
-            name: true,
-            feeCode: true,
-            category: true
-          }
+          select: { id: true, name: true, feeCode: true, category: true }
         },
         collector: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         }
       }
     })
@@ -267,32 +237,17 @@ export async function PUT(request: NextRequest) {
       },
       include: {
         student: {
-          select: {
-            id: true,
-            name: true,
-            studentId: true,
-            class: {
+          select: { id: true, name: true, studentId: true, class: {
               select: {
-                className: true,
-                classCode: true
-              }
+                classCode: true, sectionName: true }
             }
           }
         },
         feeStructure: {
-          select: {
-            id: true,
-            name: true,
-            feeCode: true,
-            category: true
-          }
+          select: { id: true, name: true, feeCode: true, category: true }
         },
         collector: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         }
       }
     })

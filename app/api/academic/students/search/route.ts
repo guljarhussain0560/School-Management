@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
     // Build where clause
     const where: any = {
-      schoolId: session.user.schoolId,
+      schoolId: session.user.schoolId || "",
       status: 'ACCEPTED' // Only show accepted students
     }
 
@@ -35,26 +35,15 @@ export async function GET(request: NextRequest) {
 
     if (grade) {
       where.class = {
-        className: {
-          contains: `Class ${grade}`,
-          mode: 'insensitive'
-        }
+        classCode: { contains: `Class ${grade}`, mode: 'insensitive' }
       }
     }
 
     const students = await prisma.student.findMany({
       where,
-      select: {
-        id: true,
-        studentId: true,
-        name: true,
-        rollNumber: true,
-        admissionNumber: true,
-        class: {
+      select: { id: true, studentId: true, name: true, rollNumber: true, admissionNumber: true, class: {
           select: {
-            className: true,
-            classCode: true
-          }
+            classCode: true, sectionName: true }
         }
       },
       orderBy: {

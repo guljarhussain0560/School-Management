@@ -176,6 +176,35 @@ async function main() {
   ]);
 
   // Create sample classes
+  const grades = await Promise.all([
+    prisma.grade.upsert({
+      where: { id: 'grade-5' },
+      update: {},
+      create: {
+        id: 'grade-5',
+        gradeCode: 'G05',
+        gradeName: 'Grade 5',
+        gradeLevel: 5,
+        batchId: batch2024.id,
+        schoolId: school.id,
+        createdBy: admin.id,
+      },
+    }),
+    prisma.grade.upsert({
+      where: { id: 'grade-6' },
+      update: {},
+      create: {
+        id: 'grade-6',
+        gradeCode: 'G06',
+        gradeName: 'Grade 6',
+        gradeLevel: 6,
+        batchId: batch2023.id,
+        schoolId: school.id,
+        createdBy: admin.id,
+      },
+    }),
+  ]);
+
   const classes = await Promise.all([
     prisma.class.upsert({
       where: { id: 'class-5' },
@@ -183,7 +212,7 @@ async function main() {
       create: {
         id: 'class-5',
         classCode: '24A5A', // Generated class code (batch + level + section)
-        className: 'Class 5',
+        sectionName: 'A', gradeId: 'grade-5',
         description: 'Fifth grade class',
         capacity: 30,
         batchId: batch2024.id,
@@ -197,7 +226,7 @@ async function main() {
       create: {
         id: 'class-6',
         classCode: '23A6A', // Generated class code (batch + level + section)
-        className: 'Class 6',
+        sectionName: 'A', gradeId: 'grade-6',
         description: 'Sixth grade class',
         capacity: 30,
         batchId: batch2023.id,
@@ -214,7 +243,7 @@ async function main() {
       where: { id: 'sg-math-5' },
       update: {},
       create: {
-        id: 'sg-math-5',
+        id: 'sg-math-5', gradeId: 'grade-5',
         subjectId: subjects[0].id, // Math
         classId: classes[0].id, // Class 5
         schoolId: school.id,
@@ -224,7 +253,7 @@ async function main() {
       where: { id: 'sg-english-5' },
       update: {},
       create: {
-        id: 'sg-english-5',
+        id: 'sg-english-5', gradeId: 'grade-5',
         subjectId: subjects[1].id, // English
         classId: classes[0].id, // Class 5
         schoolId: school.id,
@@ -234,7 +263,7 @@ async function main() {
       where: { id: 'sg-science-5' },
       update: {},
       create: {
-        id: 'sg-science-5',
+        id: 'sg-science-5', gradeId: 'grade-5',
         subjectId: subjects[2].id, // Science
         classId: classes[0].id, // Class 5
         schoolId: school.id,
@@ -245,7 +274,7 @@ async function main() {
       where: { id: 'sg-math-6' },
       update: {},
       create: {
-        id: 'sg-math-6',
+        id: 'sg-math-6', gradeId: 'grade-6',
         subjectId: subjects[0].id, // Math
         classId: classes[1].id, // Class 6
         schoolId: school.id,
@@ -255,7 +284,7 @@ async function main() {
       where: { id: 'sg-english-6' },
       update: {},
       create: {
-        id: 'sg-english-6',
+        id: 'sg-english-6', gradeId: 'grade-6',
         subjectId: subjects[1].id, // English
         classId: classes[1].id, // Class 6
         schoolId: school.id,
@@ -265,7 +294,7 @@ async function main() {
       where: { id: 'sg-social-6' },
       update: {},
       create: {
-        id: 'sg-social-6',
+        id: 'sg-social-6', gradeId: 'grade-6',
         subjectId: subjects[3].id, // Social Studies
         classId: classes[1].id, // Class 6
         schoolId: school.id,

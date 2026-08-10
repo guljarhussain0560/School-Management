@@ -24,45 +24,24 @@ export async function GET(
       },
       include: {
         batch: {
-          select: {
-            id: true,
-            batchName: true,
-            academicYear: true
-          }
+          select: { id: true, batchName: true, academicYear: true }
         },
         creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         },
         subjects: {
           include: {
             subject: {
-              select: {
-                id: true,
-                subjectName: true,
-                subjectCode: true
-              }
+              select: { id: true, subjectName: true, subjectCode: true }
             }
           }
         },
         students: {
-          select: {
-            id: true,
-            studentId: true,
-            name: true,
-            rollNumber: true,
-            email: true
-          },
+          select: { id: true, studentId: true, name: true, rollNumber: true, email: true },
           orderBy: { rollNumber: 'asc' }
         },
         _count: {
-          select: {
-            students: true,
-            subjects: true
-          }
+          select: { students: true, subjects: true }
         }
       }
     });
@@ -122,25 +101,6 @@ export async function PUT(
       );
     }
 
-    // Check if class name is being changed and if it already exists
-    if (className && className !== existingClass.className) {
-      const duplicateClass = await prisma.class.findFirst({
-        where: {
-          className,
-          batchId: existingClass.batchId,
-          schoolId: session.user.schoolId!,
-          id: { not: params.id }
-        }
-      });
-
-      if (duplicateClass) {
-        return NextResponse.json(
-          { error: 'Class name already exists in this batch' },
-          { status: 400 }
-        );
-      }
-    }
-
     // Check if class code is being changed and if it already exists
     if (classCode && classCode !== existingClass.classCode) {
       const duplicateCode = await prisma.class.findFirst({
@@ -161,8 +121,8 @@ export async function PUT(
     }
 
     const updateData: any = {};
-    if (className !== undefined) updateData.className = className;
     if (classCode !== undefined) updateData.classCode = classCode;
+    if (className !== undefined) updateData.sectionName = className;
     if (description !== undefined) updateData.description = description;
     if (capacity !== undefined) updateData.capacity = capacity;
     if (isActive !== undefined) updateData.isActive = isActive;
@@ -172,24 +132,13 @@ export async function PUT(
       data: updateData,
       include: {
         batch: {
-          select: {
-            id: true,
-            batchName: true,
-            academicYear: true
-          }
+          select: { id: true, batchName: true, academicYear: true }
         },
         creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         },
         _count: {
-          select: {
-            students: true,
-            subjects: true
-          }
+          select: { students: true, subjects: true }
         }
       }
     });

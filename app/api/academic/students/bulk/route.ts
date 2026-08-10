@@ -95,10 +95,7 @@ export async function POST(request: NextRequest) {
         const gradeLevel = row['Grade'].toString().trim();
         const classRecord = await prisma.class.findFirst({
           where: {
-            className: {
-              contains: `Class ${gradeLevel}`,
-              mode: 'insensitive'
-            },
+            classCode: { contains: `Class ${gradeLevel}`, mode: 'insensitive' },
             schoolId: session.user.schoolId!
           }
         });
@@ -112,7 +109,7 @@ export async function POST(request: NextRequest) {
           name: row['Name'].toString().trim(),
           email: row['Email']?.toString().trim() || '',
           age: parseInt(row['Age']),
-          classId: classRecord.id,
+          classId: classRecord.id, batchId: classRecord.batchId,
           rollNumber: row['Roll Number']?.toString().trim() || rollNumber,
           parentContact: row['Parent Contact']?.toString().trim() || '',
           address: row['Address']?.toString().trim() || '',

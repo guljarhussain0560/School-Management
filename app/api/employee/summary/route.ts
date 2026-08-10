@@ -17,19 +17,19 @@ export async function GET(request: NextRequest) {
     // Calculate summary statistics efficiently
     const [totalEmployees, activeEmployees, inactiveEmployees, onLeaveEmployees, totalSalary] = await Promise.all([
       prisma.employee.count({
-        where: { schoolId: session.user.schoolId }
+        where: { schoolId: session.user.schoolId || "" }
       }),
       prisma.employee.count({
-        where: { schoolId: session.user.schoolId, status: 'ACTIVE' }
+        where: { schoolId: session.user.schoolId || "" || "", status: 'ACTIVE' }
       }),
       prisma.employee.count({
-        where: { schoolId: session.user.schoolId, status: 'INACTIVE' }
+        where: { schoolId: session.user.schoolId || "" || "", status: 'INACTIVE' }
       }),
       prisma.employee.count({
-        where: { schoolId: session.user.schoolId, status: 'ON_LEAVE' }
+        where: { schoolId: session.user.schoolId || "" || "", status: 'ON_LEAVE' }
       }),
       prisma.employee.aggregate({
-        where: { schoolId: session.user.schoolId, status: 'ACTIVE' },
+        where: { schoolId: session.user.schoolId || "" || "", status: 'ACTIVE' },
         _sum: { salary: true }
       })
     ])
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       activeEmployees,
       inactiveEmployees,
       onLeaveEmployees,
-      totalSalary: Number(totalSalary._sum.salary || 0)
+      totalSalary: Number(totalSalary?._sum.salary || 0)
     }
 
     return NextResponse.json({ summary })

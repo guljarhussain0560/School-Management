@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       studentId: record.studentId,
       date: new Date(date),
       isPresent: record.status === 'PRESENT', // Convert to boolean
-      schoolId: session.user.schoolId,
+      schoolId: session.user.schoolId || "",
       markedBy: session.user.id
     }))
 
@@ -150,17 +150,10 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         student: {
-          select: {
-            id: true,
-            studentId: true,
-            name: true,
-            rollNumber: true
-          }
+          select: { id: true, studentId: true, name: true, rollNumber: true }
         },
         marker: {
-          select: {
-            name: true
-          }
+          select: { name: true }
         }
       },
       orderBy: {

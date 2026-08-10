@@ -46,31 +46,15 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
         include: {
           bus: {
-            select: {
-              id: true,
-              busNumber: true,
-              busName: true,
-              driverName: true,
-              capacity: true
-            }
+            select: { id: true, busNumber: true, busName: true, driverName: true, capacity: true }
           },
           manager: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
+            select: { id: true, name: true, email: true }
           },
           students: {
-            select: {
-              id: true,
-              studentId: true,
-              name: true,
-              class: {
+            select: { id: true, studentId: true, name: true, class: {
                 select: {
-                  className: true,
-                  classCode: true
-                }
+                  classCode: true, sectionName: true }
               }
             }
           }
@@ -144,26 +128,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Find or assign bus
+    const firstBus = await prisma.bus.findFirst({ where: { schoolId: session.user.schoolId! } });
     const route = await prisma.busRoute.create({
       data: {
         routeName,
-        // routeCode field doesn't exist in schema
-        // description field doesn't exist in schema
-        startLocation,
-        endLocation,
-        totalDistance: totalDistance ? parseFloat(totalDistance) : null,
-        estimatedDuration: estimatedDuration ? parseInt(estimatedDuration) : null,
-        isActive,
+        busId: firstBus?.id || '',
+        status: 'ON_TIME',
         managedBy: session.user.id,
         schoolId: session.user.schoolId!
       },
       include: {
         manager: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         }
       }
     });

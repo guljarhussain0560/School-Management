@@ -34,9 +34,7 @@ export async function PATCH(
       data: { status },
       include: {
         creator: {
-          select: {
-            name: true
-          }
+          select: { name: true }
         }
       }
     })
@@ -74,9 +72,7 @@ export async function GET(
       where: { id: params.id },
       include: {
         creator: {
-          select: {
-            name: true
-          }
+          select: { name: true }
         }
       }
     })

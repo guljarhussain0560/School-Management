@@ -48,37 +48,20 @@ export async function GET(request: NextRequest) {
         orderBy: { gradeLevel: 'asc' },
         include: {
           batch: {
-            select: {
-              id: true,
-              batchName: true,
-              academicYear: true
-            }
+            select: { id: true, batchName: true, academicYear: true }
           },
           creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
+            select: { id: true, name: true, email: true }
           },
           sections: {
-            select: {
-              id: true,
-              sectionName: true,
-              sectionType: true,
-              capacity: true,
-              _count: {
+            select: { id: true, sectionName: true, sectionType: true, capacity: true, _count: {
                 select: {
-                  students: true
-                }
+                  students: true }
               }
             }
           },
           _count: {
-            select: {
-              sections: true,
-              subjects: true
-            }
+            select: { sections: true, subjects: true }
           }
         }
       }),
@@ -178,24 +161,13 @@ export async function POST(request: NextRequest) {
       },
       include: {
         batch: {
-          select: {
-            id: true,
-            batchName: true,
-            academicYear: true
-          }
+          select: { id: true, batchName: true, academicYear: true }
         },
         creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         },
         _count: {
-          select: {
-            sections: true,
-            subjects: true
-          }
+          select: { sections: true, subjects: true }
         }
       }
     });

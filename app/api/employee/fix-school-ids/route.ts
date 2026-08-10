@@ -15,20 +15,19 @@ export async function POST(request: NextRequest) {
     }
 
     const schoolId = session.user.schoolId
+    if (!schoolId) {
+      return NextResponse.json(
+        { error: 'Admin has no associated school' },
+        { status: 400 }
+      )
+    }
 
-    // Get all employees that don't have a schoolId or have a different schoolId
+    // Get all employees that have a different schoolId
     const employeesToUpdate = await prisma.employee.findMany({
       where: {
-        OR: [
-          { schoolId: null },
-          { schoolId: { not: schoolId } }
-        ]
+        schoolId: { not: schoolId }
       },
-      select: {
-        id: true,
-        name: true,
-        schoolId: true
-      }
+      select: { id: true, name: true, schoolId: true }
     })
 
     if (employeesToUpdate.length === 0) {
@@ -41,10 +40,7 @@ export async function POST(request: NextRequest) {
     // Update all employees to have the correct schoolId
     const updateResult = await prisma.employee.updateMany({
       where: {
-        OR: [
-          { schoolId: null },
-          { schoolId: { not: schoolId } }
-        ]
+        schoolId: { not: schoolId }
       },
       data: {
         schoolId: schoolId
@@ -62,7 +58,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Fix school IDs error:', error)
+    console.error('Error fixing employee school IDs:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

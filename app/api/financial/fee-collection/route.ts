@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     // Build where clause
     const where: any = {
-      schoolId: session.user.schoolId
+      schoolId: session.user.schoolId || ""
     }
 
     // Add search filter
@@ -67,24 +67,14 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         student: {
-          select: {
-            id: true,
-            studentId: true,
-            name: true,
-            rollNumber: true,
-            admissionNumber: true,
-            class: {
+          select: { id: true, studentId: true, name: true, rollNumber: true, admissionNumber: true, class: {
               select: {
-                className: true,
-                classCode: true
-              }
+                classCode: true, sectionName: true }
             }
           }
         },
         collector: {
-          select: {
-            name: true
-          }
+          select: { name: true }
         }
       },
       orderBy: { date: 'desc' },
@@ -95,25 +85,25 @@ export async function GET(request: NextRequest) {
     // Calculate summary statistics
     const [totalAmount, cashTotal, upiTotal, bankTransferTotal] = await Promise.all([
       prisma.feeCollection.aggregate({
-        where: { schoolId: session.user.schoolId },
+        where: { schoolId: session.user.schoolId || "" },
         _sum: { amount: true }
       }),
       prisma.feeCollection.aggregate({
-        where: { schoolId: session.user.schoolId, paymentMode: 'CASH' },
+        where: { schoolId: session.user.schoolId || "" || "", paymentMode: 'CASH' },
         _sum: { amount: true }
       }),
       prisma.feeCollection.aggregate({
-        where: { schoolId: session.user.schoolId, paymentMode: 'UPI' },
+        where: { schoolId: session.user.schoolId || "" || "", paymentMode: 'UPI' },
         _sum: { amount: true }
       }),
       prisma.feeCollection.aggregate({
-        where: { schoolId: session.user.schoolId, paymentMode: 'BANK_TRANSFER' },
+        where: { schoolId: session.user.schoolId || "" || "", paymentMode: 'BANK_TRANSFER' },
         _sum: { amount: true }
       })
     ])
 
     const summary = {
-      totalAmount: Number(totalAmount._sum.amount || 0),
+      totalAmount: Number(totalAmount?._sum.amount || 0),
       totalRecords: totalCount,
       cashTotal: Number(cashTotal._sum.amount || 0),
       upiTotal: Number(upiTotal._sum.amount || 0),
@@ -179,14 +169,11 @@ export async function POST(request: NextRequest) {
           { rollNumber: studentId },
           { admissionNumber: studentId }
         ],
-        schoolId: session.user.schoolId!
+        schoolId: session.user.schoolId || ""!
       },
       include: {
         class: {
-          select: {
-            className: true,
-            classCode: true
-          }
+          select: { classCode: true, sectionName: true }
         }
       }
     })
@@ -211,7 +198,7 @@ export async function POST(request: NextRequest) {
         receiptUrl,
         notes,
         collectedBy: session.user.id,
-        schoolId: session.user.schoolId!,
+        schoolId: session.user.schoolId || ""!,
       }
     })
 
@@ -224,7 +211,7 @@ export async function POST(request: NextRequest) {
       studentName: student.name,
       studentId: student.studentId,
       admissionNumber: student.admissionNumber,
-      grade: student.class?.className || 'Unknown',
+      grade: student.class?.classCode || 'Unknown',
       amount: parseFloat(amount),
       paymentMode: normalizedPaymentMode,
       notes,

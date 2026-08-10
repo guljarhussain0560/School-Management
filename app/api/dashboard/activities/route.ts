@@ -17,19 +17,14 @@ export async function GET(request: NextRequest) {
     const schoolId = session.user.schoolId!;
 
     // Get recent activities from different sources
-    const activities = [];
+    const activities: any[] = [];
 
     // Recent student admissions
     const recentAdmissions = await prisma.student.findMany({
       where: { schoolId },
       orderBy: { createdAt: 'desc' },
       take: 5,
-      select: {
-        id: true,
-        name: true,
-        createdAt: true,
-        status: true
-      }
+      select: { id: true, name: true, createdAt: true, status: true }
     });
 
     recentAdmissions.forEach(student => {
@@ -50,14 +45,9 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { date: 'desc' },
       take: 5,
-      select: {
-        id: true,
-        amount: true,
-        date: true,
-        student: {
+      select: { id: true, amount: true, date: true, student: {
           select: {
-            name: true
-          }
+            name: true }
         }
       }
     });
@@ -77,12 +67,7 @@ export async function GET(request: NextRequest) {
       where: { schoolId },
       orderBy: { createdAt: 'desc' },
       take: 3,
-      select: {
-        id: true,
-        facility: true,
-        status: true,
-        createdAt: true
-      }
+      select: { id: true, facility: true, status: true, createdAt: true }
     });
 
     recentMaintenance.forEach(maintenance => {
@@ -103,13 +88,7 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { createdAt: 'desc' },
       take: 3,
-      select: {
-        id: true,
-        type: true,
-        priority: true,
-        description: true,
-        createdAt: true
-      }
+      select: { id: true, type: true, priority: true, description: true, createdAt: true }
     });
 
     recentAlerts.forEach(alert => {
@@ -127,12 +106,7 @@ export async function GET(request: NextRequest) {
       where: { schoolId },
       orderBy: { createdAt: 'desc' },
       take: 3,
-      select: {
-        id: true,
-        title: true,
-        createdAt: true,
-        status: true
-      }
+      select: { id: true, title: true, createdAt: true, status: true }
     });
 
     recentAssignments.forEach(assignment => {

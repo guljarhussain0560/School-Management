@@ -35,28 +35,18 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         subject: {
-          select: {
-            id: true,
-            subjectName: true,
-            subjectCode: true
-          }
+          select: { id: true, subjectName: true, subjectCode: true }
         },
         class: {
-          select: {
-            id: true,
-            className: true,
-            classCode: true,
-            batch: {
+          select: { id: true, classCode: true, sectionName: true, batch: {
               select: {
-                batchName: true,
-                academicYear: true
-              }
+                batchName: true, academicYear: true }
             }
           }
         }
       },
       orderBy: [
-        { class: { className: 'asc' } },
+        { class: { classCode: 'asc' } },
         { subject: { subjectName: 'asc' } }
       ]
     });
@@ -109,29 +99,15 @@ export async function POST(request: NextRequest) {
     }
 
     const newAssignment = await prisma.subjectGrade.create({
-      data: {
-        subjectId,
-        classId,
-        schoolId: session.user.schoolId!
-      },
+      data: { subjectId, classId, gradeId: (await prisma.class.findUnique({ where: { id: classId } }))?.gradeId || '', schoolId: session.user.schoolId! },
       include: {
         subject: {
-          select: {
-            id: true,
-            subjectName: true,
-            subjectCode: true
-          }
+          select: { id: true, subjectName: true, subjectCode: true }
         },
         class: {
-          select: {
-            id: true,
-            className: true,
-            classCode: true,
-            batch: {
+          select: { id: true, classCode: true, sectionName: true, batch: {
               select: {
-                batchName: true,
-                academicYear: true
-              }
+                batchName: true, academicYear: true }
             }
           }
         }

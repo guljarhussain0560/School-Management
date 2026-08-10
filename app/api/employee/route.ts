@@ -74,9 +74,7 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           creator: {
-            select: {
-              name: true,
-            },
+            select: { name: true },
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -87,16 +85,16 @@ export async function GET(request: NextRequest) {
         where: session.user.schoolId ? { schoolId: session.user.schoolId } : {},
       }),
       prisma.employee.count({
-        where: session.user.schoolId ? { schoolId: session.user.schoolId, status: 'ACTIVE' } : { status: 'ACTIVE' },
+        where: session.user.schoolId ? { schoolId: session.user.schoolId || "", status: 'ACTIVE' } : { status: 'ACTIVE' },
       }),
       prisma.employee.count({
-        where: session.user.schoolId ? { schoolId: session.user.schoolId, status: 'INACTIVE' } : { status: 'INACTIVE' },
+        where: session.user.schoolId ? { schoolId: session.user.schoolId || "", status: 'INACTIVE' } : { status: 'INACTIVE' },
       }),
       prisma.employee.count({
-        where: session.user.schoolId ? { schoolId: session.user.schoolId, status: 'ON_LEAVE' } : { status: 'ON_LEAVE' },
+        where: session.user.schoolId ? { schoolId: session.user.schoolId || "", status: 'ON_LEAVE' } : { status: 'ON_LEAVE' },
       }),
       prisma.employee.aggregate({
-        where: session.user.schoolId ? { schoolId: session.user.schoolId, status: 'ACTIVE' } : { status: 'ACTIVE' },
+        where: session.user.schoolId ? { schoolId: session.user.schoolId || "", status: 'ACTIVE' } : { status: 'ACTIVE' },
         _sum: { salary: true },
       }),
     ])

@@ -26,15 +26,9 @@ export async function GET(request: NextRequest) {
           schoolId: session.user.schoolId!,
           status: 'ACCEPTED'
         },
-        select: {
-          id: true,
-          studentId: true,
-          name: true,
-          class: {
+        select: { id: true, studentId: true, name: true, class: {
             select: {
-              className: true,
-              classCode: true
-            }
+              classCode: true, sectionName: true }
           },
           pickupAddress: true,
           parentContact: true,
@@ -42,12 +36,7 @@ export async function GET(request: NextRequest) {
           busRoute: {
             include: {
               bus: {
-                select: {
-                  id: true,
-                  busNumber: true,
-                  busName: true,
-                  driverName: true
-                }
+                select: { id: true, busNumber: true, busName: true, driverName: true }
               }
             }
           }
@@ -74,15 +63,9 @@ export async function GET(request: NextRequest) {
           { name: { contains: search, mode: 'insensitive' } }
         ]
       },
-      select: {
-        id: true,
-        studentId: true,
-        name: true,
-        class: {
+      select: { id: true, studentId: true, name: true, class: {
           select: {
-            className: true,
-            classCode: true
-          }
+            classCode: true, sectionName: true }
         },
         pickupAddress: true,
         parentContact: true,
@@ -90,12 +73,7 @@ export async function GET(request: NextRequest) {
         busRoute: {
           include: {
             bus: {
-              select: {
-                id: true,
-                busNumber: true,
-                busName: true,
-                driverName: true
-              }
+              select: { id: true, busNumber: true, busName: true, driverName: true }
             }
           }
         }

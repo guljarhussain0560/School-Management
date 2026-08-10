@@ -24,16 +24,10 @@ export async function GET(
       where: { id: examId, schoolId },
       include: {
         subject: {
-          select: {
-            id: true,
-            subjectName: true
-          }
+          select: { id: true, subjectName: true }
         },
         class: {
-          select: {
-            id: true,
-            className: true
-          }
+          select: { id: true, classCode: true, sectionName: true }
         },
         schedules: {
           orderBy: { examDate: 'asc' }
@@ -41,11 +35,7 @@ export async function GET(
         results: {
           include: {
             student: {
-              select: {
-                id: true,
-                name: true,
-                rollNumber: true
-              }
+              select: { id: true, name: true, rollNumber: true }
             }
           }
         }
@@ -135,16 +125,10 @@ export async function PUT(
       },
       include: {
         subject: {
-          select: {
-            id: true,
-            subjectName: true
-          }
+          select: { id: true, subjectName: true }
         },
         class: {
-          select: {
-            id: true,
-            className: true
-          }
+          select: { id: true, classCode: true, sectionName: true }
         }
       }
     });

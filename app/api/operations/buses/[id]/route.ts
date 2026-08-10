@@ -24,16 +24,9 @@ export async function GET(
       },
       include: {
         routes: {
-          select: {
-            id: true,
-            routeName: true,
-            status: true,
-            students: {
+          select: { id: true, routeName: true, status: true, students: {
               select: {
-                id: true,
-                studentId: true,
-                name: true
-              }
+                id: true, studentId: true, name: true }
             }
           }
         }
@@ -131,11 +124,7 @@ export async function PUT(
       data: updateData,
       include: {
         routes: {
-          select: {
-            id: true,
-            routeName: true,
-            status: true
-          }
+          select: { id: true, routeName: true, status: true }
         }
       }
     });

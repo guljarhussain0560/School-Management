@@ -15,25 +15,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Get school profile for the current user's school
+    const orConditions: any[] = [{ adminId: session.user.id }]
+    if (session.user.schoolId) {
+      orConditions.push({ id: session.user.schoolId })
+    }
+
     const school = await prisma.school.findFirst({
       where: { 
-        OR: [
-          { adminId: session.user.id },
-          { id: session.user.schoolId }
-        ]
+        OR: orConditions
       },
-      select: {
-        id: true,
-        schoolId: true,
-        schoolCode: true,
-        name: true,
-        registrationNumber: true,
-        address: true,
-        phone: true,
-        email: true,
-        createdAt: true,
-        updatedAt: true
-      }
+      select: { id: true, schoolId: true, schoolCode: true, name: true, registrationNumber: true, address: true, phone: true, email: true, createdAt: true, updatedAt: true }
     });
 
     if (!school) {
@@ -126,13 +117,14 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Find the school to update
+    const updateOrConditions: any[] = [{ adminId: session.user.id }]
+    if (session.user.schoolId) {
+      updateOrConditions.push({ id: session.user.schoolId })
+    }
+
     const school = await prisma.school.findFirst({
       where: { 
-        OR: [
-          { adminId: session.user.id },
-          { id: session.user.schoolId }
-        ]
+        OR: updateOrConditions
       }
     });
 
@@ -169,20 +161,8 @@ export async function PUT(request: NextRequest) {
         address: address || school.address,
         phone: phone || school.phone,
         email: email || school.email,
-        // Note: Additional fields like city, state, etc. would need to be added to the schema
-        // For now, we'll store them in a JSON field or extend the schema
       },
-      select: {
-        id: true,
-        schoolId: true,
-        schoolCode: true,
-        name: true,
-        registrationNumber: true,
-        address: true,
-        phone: true,
-        email: true,
-        updatedAt: true
-      }
+      select: { id: true, schoolId: true, schoolCode: true, name: true, registrationNumber: true, address: true, phone: true, email: true, updatedAt: true }
     });
 
     return NextResponse.json({

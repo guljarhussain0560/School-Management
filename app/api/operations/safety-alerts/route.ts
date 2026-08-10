@@ -23,10 +23,7 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
       include: {
         creator: {
-          select: {
-            name: true,
-            email: true
-          }
+          select: { name: true, email: true }
         }
       }
     });
@@ -76,10 +73,7 @@ export async function POST(request: NextRequest) {
       },
       include: {
         creator: {
-          select: {
-            name: true,
-            email: true
-          }
+          select: { name: true, email: true }
         }
       }
     });

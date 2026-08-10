@@ -48,11 +48,7 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
         include: {
           routes: {
-            select: {
-              id: true,
-              routeName: true,
-              status: true
-            }
+            select: { id: true, routeName: true, status: true }
           }
         }
       }),
@@ -136,31 +132,17 @@ export async function POST(request: NextRequest) {
     const bus = await prisma.bus.create({
       data: {
         busNumber,
-        // registrationNumber field doesn't exist in schema
-        capacity: parseInt(capacity),
-        driverName,
-        driverPhone,
+        capacity: parseInt(capacity) || 50,
+        driverName: driverName || null,
+        driverPhone: driverPhone || null,
         conductorName: conductorName || null,
         conductorPhone: conductorPhone || null,
-        // routeId field doesn't exist in schema
-        status: status as any,
-        fuelType: fuelType as any,
-        yearOfManufacture: yearOfManufacture ? parseInt(yearOfManufacture) : null,
-        insuranceExpiry: insuranceExpiry ? new Date(insuranceExpiry) : null,
-        fitnessExpiry: fitnessExpiry ? new Date(fitnessExpiry) : null,
-        lastServiceDate: lastServiceDate ? new Date(lastServiceDate) : null,
-        nextServiceDate: nextServiceDate ? new Date(nextServiceDate) : null,
-        mileage: mileage ? parseInt(mileage) : null,
-        notes: notes || null,
+        status: (status as any) || 'ACTIVE',
         schoolId: session.user.schoolId!
       },
       include: {
         routes: {
-          select: {
-            id: true,
-            routeName: true,
-            status: true
-          }
+          select: { id: true, routeName: true, status: true }
         }
       }
     });

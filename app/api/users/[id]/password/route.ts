@@ -46,12 +46,7 @@ export async function PUT(
     const updatedUser = await prisma.user.update({
       where: { id },
       data: { password: hashedPassword },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true
-      }
+      select: { id: true, name: true, email: true, role: true }
     })
 
     // Send email if requested

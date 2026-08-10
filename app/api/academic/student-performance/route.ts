@@ -31,10 +31,7 @@ export async function GET(request: NextRequest) {
 
     if (grade) {
       where.class = {
-        className: {
-          contains: grade,
-          mode: 'insensitive'
-        }
+        classCode: { contains: grade, mode: 'insensitive' }
       }
     }
 
@@ -64,23 +61,15 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           student: {
-            select: {
-              id: true,
-              studentId: true,
-              name: true,
-              class: {
+            select: { id: true, studentId: true, name: true, class: {
                 select: {
-                  className: true,
-                  classCode: true
-                }
+                  classCode: true, sectionName: true }
               },
               rollNumber: true
             }
           },
           creator: {
-            select: {
-              name: true
-            }
+            select: { name: true }
           }
         },
         orderBy: {
@@ -216,10 +205,7 @@ export async function POST(request: NextRequest) {
         // Find class
         const classRecord = await prisma.class.findFirst({
           where: {
-            className: {
-              contains: grade,
-              mode: 'insensitive'
-            },
+            classCode: { contains: grade, mode: 'insensitive' },
             schoolId: session.user.schoolId!
           }
         });
@@ -291,10 +277,7 @@ export async function POST(request: NextRequest) {
     // Find class
     const classRecord = await prisma.class.findFirst({
       where: {
-        className: {
-          contains: grade,
-          mode: 'insensitive'
-        },
+        classCode: { contains: grade, mode: 'insensitive' },
         schoolId: session.user.schoolId!
       }
     });
@@ -341,15 +324,9 @@ export async function POST(request: NextRequest) {
       },
       include: {
         student: {
-          select: {
-            id: true,
-            studentId: true,
-            name: true,
-            class: {
+          select: { id: true, studentId: true, name: true, class: {
               select: {
-                className: true,
-                classCode: true
-              }
+                classCode: true, sectionName: true }
             },
             rollNumber: true
           }

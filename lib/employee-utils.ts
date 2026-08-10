@@ -65,9 +65,7 @@ export async function getNextSequentialEmployeeId(): Promise<string> {
         startsWith: 'EMP'
       }
     },
-    select: {
-      employeeId: true
-    }
+    select: { employeeId: true }
   })
   
   let maxNumber = 0

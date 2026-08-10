@@ -65,9 +65,7 @@ export async function getNextSequentialStudentId(): Promise<string> {
         startsWith: 'STU'
       }
     },
-    select: {
-      studentId: true
-    }
+    select: { studentId: true }
   })
   
   let maxNumber = 0

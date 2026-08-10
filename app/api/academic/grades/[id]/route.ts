@@ -24,25 +24,15 @@ export async function GET(
       },
       include: {
         batch: {
-          select: {
-            id: true,
-            batchName: true,
-            academicYear: true
-          }
+          select: { id: true, batchName: true, academicYear: true }
         },
         creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         },
         sections: {
           include: {
             _count: {
-              select: {
-                students: true
-              }
+              select: { students: true }
             }
           },
           orderBy: { sectionName: 'asc' }
@@ -50,19 +40,12 @@ export async function GET(
         subjects: {
           include: {
             subject: {
-              select: {
-                id: true,
-                subjectName: true,
-                subjectCode: true
-              }
+              select: { id: true, subjectName: true, subjectCode: true }
             }
           }
         },
         _count: {
-          select: {
-            sections: true,
-            subjects: true
-          }
+          select: { sections: true, subjects: true }
         }
       }
     });
@@ -155,24 +138,13 @@ export async function PUT(
       },
       include: {
         batch: {
-          select: {
-            id: true,
-            batchName: true,
-            academicYear: true
-          }
+          select: { id: true, batchName: true, academicYear: true }
         },
         creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         },
         _count: {
-          select: {
-            sections: true,
-            subjects: true
-          }
+          select: { sections: true, subjects: true }
         }
       }
     });
@@ -213,9 +185,7 @@ export async function DELETE(
       },
       include: {
         _count: {
-          select: {
-            sections: true
-          }
+          select: { sections: true }
         }
       }
     });

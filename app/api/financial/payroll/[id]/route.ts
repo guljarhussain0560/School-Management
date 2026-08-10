@@ -36,13 +36,7 @@ export async function PATCH(
       },
       include: {
         employee: {
-          select: {
-            id: true,
-            name: true,
-            employeeId: true,
-            department: true,
-            position: true
-          }
+          select: { id: true, name: true, employeeId: true, department: true, position: true }
         }
       }
     })
@@ -63,13 +57,7 @@ export async function PATCH(
       },
       include: {
         employee: {
-          select: {
-            id: true,
-            name: true,
-            employeeId: true,
-            department: true,
-            position: true
-          }
+          select: { id: true, name: true, employeeId: true, department: true, position: true }
         }
       }
     })

@@ -54,13 +54,9 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' }, // Most recent first
       skip,
       take: limit,
-      select: {
-        id: true,
-        name: true,
-        class: {
+      select: { id: true, name: true, class: {
           select: {
-            className: true
-          }
+            classCode: true, sectionName: true }
         },
         createdAt: true,
         updatedAt: true,
@@ -79,7 +75,7 @@ export async function GET(request: NextRequest) {
     const recentAdmissions = students.map((student) => ({
       id: student.id,
       name: student.name,
-      grade: student.class?.className || 'Unknown',
+      grade: student.class?.classCode || 'Unknown',
       enrolledDate: student.createdAt.toISOString().split('T')[0],
       status: student.status, // Use actual status from database
       parentName: student.parentName,
@@ -92,10 +88,10 @@ export async function GET(request: NextRequest) {
     // Get statistics from actual database counts
     const [totalStudents, approvedCount, pendingCount, underReviewCount, rejectedCount] = await Promise.all([
       prisma.student.count({ where: { schoolId: session.user.schoolId } }),
-      prisma.student.count({ where: { schoolId: session.user.schoolId, status: 'ACCEPTED' } }),
-      prisma.student.count({ where: { schoolId: session.user.schoolId, status: 'PENDING' } }),
-      prisma.student.count({ where: { schoolId: session.user.schoolId, status: 'UNDER_REVIEW' } }),
-      prisma.student.count({ where: { schoolId: session.user.schoolId, status: 'REJECTED' } })
+      prisma.student.count({ where: { schoolId: session.user.schoolId || "", status: 'ACCEPTED' } }),
+      prisma.student.count({ where: { schoolId: session.user.schoolId || "", status: 'PENDING' } }),
+      prisma.student.count({ where: { schoolId: session.user.schoolId || "", status: 'UNDER_REVIEW' } }),
+      prisma.student.count({ where: { schoolId: session.user.schoolId || "", status: 'REJECTED' } })
     ])
 
     const stats = {

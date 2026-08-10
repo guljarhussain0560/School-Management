@@ -33,7 +33,7 @@ export async function GET(
           select: { name: true, id: true }
         },
         class: {
-          select: { className: true, classCode: true }
+          select: { classCode: true, sectionName: true }
         }
       }
     })
@@ -48,7 +48,7 @@ export async function GET(
       name: student.name,
       email: student.email,
       age: student.age,
-      grade: student.class?.className || 'Unknown',
+      grade: student.class?.classCode || 'Unknown',
       rollNumber: student.rollNumber,
       parentContact: student.parentContact,
       address: student.address,

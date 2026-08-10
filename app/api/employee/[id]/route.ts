@@ -26,20 +26,9 @@ export async function GET(
           { id: employeeId },
           { employeeId: employeeId }
         ],
-        schoolId: session.user.schoolId
+        schoolId: session.user.schoolId || ""
       },
-      select: {
-        id: true,
-        employeeId: true,
-        name: true,
-        email: true,
-        phone: true,
-        department: true,
-        position: true,
-        salary: true,
-        status: true,
-        dateOfJoining: true
-      }
+      select: { id: true, employeeId: true, name: true, email: true, phone: true, department: true, position: true, salary: true, status: true, dateOfJoining: true }
     })
 
     if (!employee) {
@@ -96,7 +85,7 @@ export async function PUT(
           { id: employeeId },
           { employeeId: employeeId }
         ],
-        schoolId: session.user.schoolId
+        schoolId: session.user.schoolId || ""
       }
     })
 
@@ -111,18 +100,7 @@ export async function PUT(
     const updatedEmployee = await prisma.employee.update({
       where: { id: existingEmployee.id },
       data: { status },
-      select: {
-        id: true,
-        employeeId: true,
-        name: true,
-        email: true,
-        phone: true,
-        department: true,
-        position: true,
-        salary: true,
-        status: true,
-        dateOfJoining: true
-      }
+      select: { id: true, employeeId: true, name: true, email: true, phone: true, department: true, position: true, salary: true, status: true, dateOfJoining: true }
     })
 
     return NextResponse.json({

@@ -45,30 +45,16 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         class: {
-          select: {
-            id: true,
-            className: true,
-            classCode: true
-          }
+          select: { id: true, classCode: true, sectionName: true }
         },
         batch: {
-          select: {
-            id: true,
-            batchName: true,
-            batchCode: true
-          }
+          select: { id: true, batchName: true, batchCode: true }
         },
         creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         },
         _count: {
-          select: {
-            collections: true
-          }
+          select: { collections: true }
         }
       },
       orderBy: {
@@ -132,7 +118,7 @@ export async function POST(request: NextRequest) {
 
     // Generate fee code
     const feeCount = await prisma.feeStructure.count({
-      where: { schoolId: session.user.schoolId }
+      where: { schoolId: session.user.schoolId || '' }
     })
     const feeCode = `FEE${String(feeCount + 1).padStart(3, '0')}`
 
@@ -171,25 +157,13 @@ export async function POST(request: NextRequest) {
       },
       include: {
         class: {
-          select: {
-            id: true,
-            className: true,
-            classCode: true
-          }
+          select: { id: true, classCode: true, sectionName: true }
         },
         batch: {
-          select: {
-            id: true,
-            batchName: true,
-            batchCode: true
-          }
+          select: { id: true, batchName: true, batchCode: true }
         },
         creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         }
       }
     })
@@ -281,25 +255,13 @@ export async function PUT(request: NextRequest) {
       },
       include: {
         class: {
-          select: {
-            id: true,
-            className: true,
-            classCode: true
-          }
+          select: { id: true, classCode: true, sectionName: true }
         },
         batch: {
-          select: {
-            id: true,
-            batchName: true,
-            batchCode: true
-          }
+          select: { id: true, batchName: true, batchCode: true }
         },
         creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         }
       }
     })
@@ -354,9 +316,7 @@ export async function DELETE(request: NextRequest) {
       },
       include: {
         _count: {
-          select: {
-            collections: true
-          }
+          select: { collections: true }
         }
       }
     })

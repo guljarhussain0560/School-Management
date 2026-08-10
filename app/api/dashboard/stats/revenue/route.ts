@@ -80,8 +80,8 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    const collectedFees = currentMonthRevenue._sum.amount || 0;
-    const expectedFees = totalExpectedFees._sum.amount || 0;
+    const collectedFees = Number(currentMonthRevenue._sum.amount || 0);
+    const expectedFees = Number(totalExpectedFees._sum.amount || 0);
     const collectionRate = expectedFees > 0 ? Math.round((collectedFees / expectedFees) * 100) : 0;
 
     // Get revenue by payment mode

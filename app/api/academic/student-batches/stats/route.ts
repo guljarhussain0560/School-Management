@@ -33,26 +33,27 @@ export async function GET(request: NextRequest) {
       prisma.studentBatch.count({
         where: { 
           schoolId: session.user.schoolId!,
-          status: 'ARCHIVED'
+          status: 'INACTIVE'
         }
       }),
       
-      // Total students assigned to active batches (exclude archived)
+      // Total students assigned to active batches
       prisma.student.count({
         where: { 
           schoolId: session.user.schoolId!,
-          batchId: { not: null },
           batch: {
             status: 'ACTIVE'
           }
         }
       }),
       
-      // Unassigned students
+      // Inactive batch students
       prisma.student.count({
         where: { 
           schoolId: session.user.schoolId!,
-          batchId: null
+          batch: {
+            status: 'INACTIVE'
+          }
         }
       })
     ]);
@@ -64,16 +65,10 @@ export async function GET(request: NextRequest) {
       take: 5,
       include: {
         creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         },
         _count: {
-          select: {
-            students: true
-          }
+          select: { students: true }
         }
       }
     });

@@ -66,10 +66,7 @@ export async function POST(request: NextRequest) {
     // Get class information for the grade
     const classRecord = await prisma.class.findFirst({
       where: {
-        className: {
-          contains: `Class ${grade}`,
-          mode: 'insensitive'
-        },
+        classCode: { contains: `Class ${grade}`, mode: 'insensitive' },
         schoolId: session.user.schoolId!
       }
     });
@@ -85,19 +82,11 @@ export async function POST(request: NextRequest) {
     const students = await prisma.student.findMany({
       where: {
         class: {
-          className: {
-            contains: `Class ${grade}`,
-            mode: 'insensitive'
-          }
+          classCode: { contains: `Class ${grade}`, mode: 'insensitive' }
         },
         schoolId: session.user.schoolId!
       },
-      select: {
-        id: true,
-        studentId: true,
-        name: true,
-        rollNumber: true
-      }
+      select: { id: true, studentId: true, name: true, rollNumber: true }
     })
 
     const studentMap = new Map(students.map(s => [s.studentId, s]))

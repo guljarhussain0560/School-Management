@@ -48,19 +48,13 @@ export async function GET(request: NextRequest) {
       where: {
         schoolId: session.user.schoolId!,
         isActive: true,
-        OR: [
-          // Fee structures applicable to all classes
-          { classId: null },
-          // Fee structures applicable to student's class
-          { classId: student.classId },
-          // Fee structures applicable to student's batch
-          { batchId: student.batchId }
-        ],
+        applicableFrom: { lte: new Date() },
         AND: [
           {
             OR: [
-              { applicableFrom: { lte: new Date() } },
-              { applicableFrom: null }
+              { classId: null },
+              { classId: student.classId },
+              { batchId: student.batchId }
             ]
           },
           {
@@ -73,30 +67,16 @@ export async function GET(request: NextRequest) {
       },
       include: {
         class: {
-          select: {
-            id: true,
-            className: true,
-            classCode: true
-          }
+          select: { id: true, classCode: true, sectionName: true }
         },
         batch: {
-          select: {
-            id: true,
-            batchName: true,
-            batchCode: true
-          }
+          select: { id: true, batchName: true, batchCode: true }
         },
         collections: {
           where: {
             studentId: studentId
           },
-          select: {
-            id: true,
-            amount: true,
-            status: true,
-            date: true,
-            dueDate: true
-          }
+          select: { id: true, amount: true, status: true, date: true, dueDate: true }
         }
       },
       orderBy: {
@@ -106,7 +86,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate total fees and paid amounts
     const feeSummary = feeStructures.map(fee => {
-      const totalPaid = fee.collections.reduce((sum, collection) => {
+      const totalPaid = fee.collections.reduce((sum: number, collection: any) => {
         return sum + (collection.status === 'PAID' ? Number(collection.amount) : 0)
       }, 0)
       

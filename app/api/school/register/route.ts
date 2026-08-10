@@ -112,17 +112,7 @@ export async function GET(request: NextRequest) {
     // Get school information
     const school = await prisma.school.findFirst({
       where: { adminId: session.user.id },
-      select: {
-        id: true,
-        schoolId: true,
-        schoolCode: true,
-        name: true,
-        registrationNumber: true,
-        address: true,
-        phone: true,
-        email: true,
-        createdAt: true
-      }
+      select: { id: true, schoolId: true, schoolCode: true, name: true, registrationNumber: true, address: true, phone: true, email: true, createdAt: true }
     })
 
     if (!school) {

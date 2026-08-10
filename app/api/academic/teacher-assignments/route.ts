@@ -36,25 +36,13 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         teacher: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         },
         subject: {
-          select: {
-            id: true,
-            subjectName: true,
-            subjectCode: true
-          }
+          select: { id: true, subjectName: true, subjectCode: true }
         },
         class: {
-          select: {
-            id: true,
-            className: true,
-            classCode: true
-          }
+          select: { id: true, classCode: true, sectionName: true }
         }
       },
       orderBy: {
@@ -146,25 +134,13 @@ export async function POST(request: NextRequest) {
       },
       include: {
         teacher: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         },
         subject: {
-          select: {
-            id: true,
-            subjectName: true,
-            subjectCode: true
-          }
+          select: { id: true, subjectName: true, subjectCode: true }
         },
         class: {
-          select: {
-            id: true,
-            className: true,
-            classCode: true
-          }
+          select: { id: true, classCode: true, sectionName: true }
         }
       }
     })

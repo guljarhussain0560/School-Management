@@ -48,29 +48,17 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
         include: {
           creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
+            select: { id: true, name: true, email: true }
           },
           students: {
-            select: {
-              id: true,
-              studentId: true,
-              name: true,
-              class: {
+            select: { id: true, studentId: true, name: true, class: {
                 select: {
-                  className: true,
-                  classCode: true
-                }
+                  classCode: true, sectionName: true }
               }
             }
           },
           _count: {
-            select: {
-              students: true
-            }
+            select: { students: true }
           }
         }
       }),
@@ -160,16 +148,10 @@ export async function POST(request: NextRequest) {
       },
       include: {
         creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         },
         _count: {
-          select: {
-            students: true
-          }
+          select: { students: true }
         }
       }
     });

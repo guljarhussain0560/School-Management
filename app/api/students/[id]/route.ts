@@ -24,17 +24,10 @@ export async function GET(
       },
       include: {
         class: {
-          select: {
-            id: true,
-            className: true,
-            classCode: true
-          }
+          select: { id: true, classCode: true, sectionName: true }
         },
         batch: {
-          select: {
-            id: true,
-            batchName: true
-          }
+          select: { id: true, batchName: true }
         }
       }
     });
@@ -102,13 +95,13 @@ export async function PUT(
       data: {
         name,
         email: email || null,
-        phone: phone || null,
+        studentPhone: phone || null,
         dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
         gender: gender || null,
         classId,
         batchId: batchId || null,
         parentName: parentName || null,
-        parentPhone: parentPhone || null,
+        parentPhone: parentPhone || phone || null,
         parentEmail: parentEmail || null,
         address: address || null,
         city: city || null,
@@ -118,21 +111,14 @@ export async function PUT(
         medicalConditions: medicalConditions || null,
         allergies: allergies || null,
         previousSchool: previousSchool || null,
-        status: status || 'ACTIVE'
+        status: (status as any) || 'ACCEPTED'
       },
       include: {
         class: {
-          select: {
-            id: true,
-            className: true,
-            classCode: true
-          }
+          select: { id: true, classCode: true, sectionName: true }
         },
         batch: {
-          select: {
-            id: true,
-            batchName: true
-          }
+          select: { id: true, batchName: true }
         }
       }
     });

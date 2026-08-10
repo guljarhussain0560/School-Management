@@ -29,13 +29,7 @@ export async function GET(request: NextRequest) {
           busRoute: {
             include: {
               bus: {
-                select: {
-                  id: true,
-                  busNumber: true,
-                  busName: true,
-                  driverName: true,
-                  driverPhone: true
-                }
+                select: { id: true, busNumber: true, busName: true, driverName: true, driverPhone: true }
               }
             }
           }
@@ -61,27 +55,16 @@ export async function GET(request: NextRequest) {
         },
         include: {
           students: {
-            select: {
-              id: true,
-              studentId: true,
-              name: true,
-              class: {
+            select: { id: true, studentId: true, name: true, class: {
                 select: {
-                  className: true,
-                  classCode: true
-                }
+                  classCode: true, sectionName: true }
               },
               pickupAddress: true,
               parentContact: true
             }
           },
           bus: {
-            select: {
-              id: true,
-              busNumber: true,
-              busName: true,
-              capacity: true
-            }
+            select: { id: true, busNumber: true, busName: true, capacity: true }
           }
         }
       });
@@ -106,11 +89,7 @@ export async function GET(request: NextRequest) {
         busRoute: {
           include: {
             bus: {
-              select: {
-                id: true,
-                busNumber: true,
-                busName: true
-              }
+              select: { id: true, busNumber: true, busName: true }
             }
           }
         }
@@ -215,13 +194,7 @@ export async function POST(request: NextRequest) {
         busRoute: {
           include: {
             bus: {
-              select: {
-                id: true,
-                busNumber: true,
-                busName: true,
-                driverName: true,
-                driverPhone: true
-              }
+              select: { id: true, busNumber: true, busName: true, driverName: true, driverPhone: true }
             }
           }
         }

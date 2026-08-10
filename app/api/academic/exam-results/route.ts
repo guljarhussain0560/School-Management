@@ -50,40 +50,20 @@ export async function GET(request: NextRequest) {
         orderBy: { marksObtained: 'desc' },
         include: {
           exam: {
-            select: {
-              id: true,
-              examName: true,
-              examType: true,
-              totalMarks: true,
-              passingMarks: true,
-              subject: {
+            select: { id: true, examName: true, examType: true, totalMarks: true, passingMarks: true, subject: {
                 select: {
-                  subjectName: true,
-                  subjectCode: true
-                }
+                  subjectName: true, subjectCode: true }
               },
               class: {
-                select: {
-                  className: true,
-                  classCode: true
-                }
+                select: { classCode: true, sectionName: true }
               }
             }
           },
           student: {
-            select: {
-              id: true,
-              studentId: true,
-              name: true,
-              rollNumber: true
-            }
+            select: { id: true, studentId: true, name: true, rollNumber: true }
           },
           creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
+            select: { id: true, name: true, email: true }
           }
         }
       }),
@@ -183,40 +163,20 @@ export async function POST(request: NextRequest) {
       },
       include: {
         exam: {
-          select: {
-            id: true,
-            examName: true,
-            examType: true,
-            totalMarks: true,
-            passingMarks: true,
-            subject: {
+          select: { id: true, examName: true, examType: true, totalMarks: true, passingMarks: true, subject: {
               select: {
-                subjectName: true,
-                subjectCode: true
-              }
+                subjectName: true, subjectCode: true }
             },
             class: {
-              select: {
-                className: true,
-                classCode: true
-              }
+              select: { classCode: true, sectionName: true }
             }
           }
         },
         student: {
-          select: {
-            id: true,
-            studentId: true,
-            name: true,
-            rollNumber: true
-          }
+          select: { id: true, studentId: true, name: true, rollNumber: true }
         },
         creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         }
       }
     });

@@ -24,11 +24,7 @@ export async function GET(
       },
       include: {
         reporter: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         }
       }
     })
@@ -94,11 +90,7 @@ export async function PUT(
       },
       include: {
         reporter: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         }
       }
     })

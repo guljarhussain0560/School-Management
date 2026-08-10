@@ -31,10 +31,7 @@ export async function POST(request: NextRequest) {
       where: {
         id: { in: studentIds },
         class: {
-          className: {
-            contains: `Class ${grade}`,
-            mode: 'insensitive'
-          }
+          classCode: { contains: `Class ${grade}`, mode: 'insensitive' }
         },
         schoolId: session.user.schoolId!
       },
@@ -54,10 +51,7 @@ export async function POST(request: NextRequest) {
     // Get class information for the grade
     const classRecord = await prisma.class.findFirst({
       where: {
-        className: {
-          contains: `Class ${grade}`,
-          mode: 'insensitive'
-        },
+        classCode: { contains: `Class ${grade}`, mode: 'insensitive' },
         schoolId: session.user.schoolId!
       }
     });
@@ -75,7 +69,7 @@ export async function POST(request: NextRequest) {
       classId: classRecord.id,
       date: new Date(date),
       isPresent: record.status === 'PRESENT',
-      schoolId: session.user.schoolId,
+      schoolId: session.user.schoolId || "",
       markedBy: session.user.id
     }))
 
@@ -170,23 +164,14 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           student: {
-            select: {
-              id: true,
-              studentId: true,
-              name: true,
-              rollNumber: true,
-              class: {
+            select: { id: true, studentId: true, name: true, rollNumber: true, class: {
                 select: {
-                  className: true,
-                  classCode: true
-                }
+                  classCode: true, sectionName: true }
               }
             }
           },
           marker: {
-            select: {
-              name: true
-            }
+            select: { name: true }
           }
         },
         orderBy: {

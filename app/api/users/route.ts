@@ -36,17 +36,9 @@ export async function GET(request: NextRequest) {
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-          isActive: true,
-          createdAt: true,
-          creator: {
+        select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true, creator: {
             select: {
-              name: true
-            }
+              name: true }
           }
         },
         orderBy: { createdAt: 'desc' },
@@ -136,14 +128,7 @@ export async function POST(request: NextRequest) {
         schoolId: session.user.schoolId!,
         createdBy: session.user.id,
       },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        isActive: true,
-        createdAt: true
-      }
+      select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true }
     })
 
     return NextResponse.json({

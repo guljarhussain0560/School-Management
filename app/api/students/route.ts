@@ -27,17 +27,10 @@ export async function GET(request: NextRequest) {
         },
         include: {
           class: {
-            select: {
-              id: true,
-              className: true,
-              classCode: true
-            }
+            select: { id: true, classCode: true, sectionName: true }
           },
           batch: {
-            select: {
-              id: true,
-              batchName: true
-            }
+            select: { id: true, batchName: true }
           }
         },
         orderBy: { name: 'asc' },
@@ -111,13 +104,15 @@ export async function POST(request: NextRequest) {
         studentId,
         name,
         email: email || null,
-        phone: phone || null,
+        studentPhone: phone || null,
         dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
         gender: gender || null,
         classId,
-        batchId: batchId || null,
+        batchId: batchId || '',
+        age: parseInt(body.age) || 10,
+        rollNumber: body.rollNumber || `ROL${Date.now().toString().slice(-4)}`,
         parentName: parentName || null,
-        parentPhone: parentPhone || null,
+        parentPhone: parentPhone || phone || null,
         parentEmail: parentEmail || null,
         address: address || null,
         city: city || null,
@@ -127,23 +122,16 @@ export async function POST(request: NextRequest) {
         medicalConditions: medicalConditions || null,
         allergies: allergies || null,
         previousSchool: previousSchool || null,
-        status: 'ACTIVE',
+        status: 'ACCEPTED',
         schoolId: session.user.schoolId!,
         createdBy: session.user.id
       },
       include: {
         class: {
-          select: {
-            id: true,
-            className: true,
-            classCode: true
-          }
+          select: { id: true, classCode: true, sectionName: true }
         },
         batch: {
-          select: {
-            id: true,
-            batchName: true
-          }
+          select: { id: true, batchName: true }
         }
       }
     });

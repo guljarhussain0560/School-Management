@@ -28,18 +28,9 @@ export async function GET(
         schoolId: session.user.schoolId!,
         role: { not: 'ADMIN' }
       },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        creator: {
+      select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true, updatedAt: true, creator: {
           select: {
-            name: true
-          }
+            name: true }
         }
       }
     })
@@ -138,14 +129,7 @@ export async function PUT(
     const updatedUser = await prisma.user.update({
       where: { id },
       data: updateData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        isActive: true,
-        updatedAt: true
-      }
+      select: { id: true, name: true, email: true, role: true, isActive: true, updatedAt: true }
     })
 
     return NextResponse.json({

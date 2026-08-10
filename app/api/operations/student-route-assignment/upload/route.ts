@@ -156,14 +156,9 @@ export async function GET(request: NextRequest) {
           schoolId: session.user.schoolId!,
           status: 'ACCEPTED'
         },
-        select: {
-          studentId: true,
-          name: true,
-          class: {
+        select: { studentId: true, name: true, class: {
             select: {
-              className: true,
-              classCode: true
-            }
+              classCode: true, sectionName: true }
           },
           pickupAddress: true
         },
@@ -175,10 +170,7 @@ export async function GET(request: NextRequest) {
         },
         include: {
           bus: {
-            select: {
-              busNumber: true,
-              busName: true
-            }
+            select: { busNumber: true, busName: true }
           }
         },
         orderBy: { routeName: 'asc' }
@@ -207,7 +199,7 @@ export async function GET(request: NextRequest) {
       templateData.push({
         'Student ID': student.studentId,
         'Student Name': student.name,
-        'Grade': student.grade,
+        'Grade': (student as any).grade || student.class?.classCode || "N/A",
         'Pickup Address': student.pickupAddress || 'Not provided',
         'Route ID': route.id,
         'Route Name': route.routeName,

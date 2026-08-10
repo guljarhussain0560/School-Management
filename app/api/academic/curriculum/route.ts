@@ -47,10 +47,7 @@ export async function POST(request: NextRequest) {
 
     const classRecord = await prisma.class.findFirst({
       where: {
-        className: {
-          contains: `Class ${grade}`,
-          mode: 'insensitive'
-        },
+        classCode: { contains: `Class ${grade}`, mode: 'insensitive' },
         schoolId: session.user.schoolId!
       }
     });
@@ -92,9 +89,7 @@ export async function POST(request: NextRequest) {
       },
       include: {
         updater: {
-          select: {
-            name: true
-          }
+          select: { name: true }
         }
       }
     })
@@ -159,9 +154,7 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           updater: {
-            select: {
-              name: true
-            }
+            select: { name: true }
           }
         },
         orderBy: {

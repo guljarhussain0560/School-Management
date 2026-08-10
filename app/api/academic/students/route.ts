@@ -67,47 +67,22 @@ export async function GET(request: NextRequest) {
     const [students, total] = await Promise.all([
       prisma.student.findMany({
         where,
-        select: {
-          id: true,
-          studentId: true,
-          name: true,
-          email: true,
-          age: true,
-          rollNumber: true,
-          parentContact: true,
-          status: true,
-          admissionDate: true,
-          class: {
+        select: { id: true, studentId: true, name: true, email: true, age: true, rollNumber: true, parentContact: true, status: true, admissionDate: true, class: {
             select: {
-              id: true,
-              classCode: true,
-              sectionName: true,
-              sectionType: true,
-              grade: {
+              id: true, classCode: true, sectionName: true, sectionType: true, grade: {
                 select: {
-                  id: true,
-                  gradeName: true,
-                  gradeCode: true,
-                  gradeLevel: true
-                }
+                  id: true, gradeName: true, gradeCode: true, gradeLevel: true }
               },
               batch: {
-                select: {
-                  id: true,
-                  batchName: true,
-                  academicYear: true
-                }
+                select: { id: true, batchName: true, academicYear: true }
               }
             }
           },
           admissionNumber: true,
-          parentContact: true,
           address: true,
           createdAt: true,
           creator: {
-            select: {
-              name: true
-            }
+            select: { name: true }
           }
         },
         orderBy: { name: 'asc' },
@@ -375,7 +350,7 @@ export async function POST(request: NextRequest) {
       data: studentCreateData,
       include: {
         class: {
-          select: { className: true, classCode: true }
+          select: { classCode: true, sectionName: true }
         }
       }
     })
@@ -386,7 +361,7 @@ export async function POST(request: NextRequest) {
         id: student.id,
         studentId: student.studentId,
         name: student.name,
-        grade: student.class?.className || 'Unknown',
+        grade: student.class?.classCode || 'Unknown',
         rollNumber: student.rollNumber,
         admissionNumber: student.admissionNumber,
         enrolledDate: student.createdAt.toISOString().split('T')[0],

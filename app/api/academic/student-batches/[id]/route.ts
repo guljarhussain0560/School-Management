@@ -24,22 +24,12 @@ export async function GET(
       },
       include: {
         creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         },
         students: {
-          select: {
-            id: true,
-            studentId: true,
-            name: true,
-            class: {
+          select: { id: true, studentId: true, name: true, class: {
               select: {
-                className: true,
-                classCode: true
-              }
+                classCode: true, sectionName: true }
             },
             email: true,
             parentContact: true,
@@ -48,9 +38,7 @@ export async function GET(
           orderBy: { name: 'asc' }
         },
         _count: {
-          select: {
-            students: true
-          }
+          select: { students: true }
         }
       }
     });
@@ -142,16 +130,10 @@ export async function PUT(
       data: updateData,
       include: {
         creator: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         },
         _count: {
-          select: {
-            students: true
-          }
+          select: { students: true }
         }
       }
     });

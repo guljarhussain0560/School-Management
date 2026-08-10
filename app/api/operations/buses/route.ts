@@ -49,11 +49,7 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
         include: {
           routes: {
-            select: {
-              id: true,
-              routeName: true,
-              status: true,
-            },
+            select: { id: true, routeName: true, status: true },
           },
         },
       }),
@@ -129,11 +125,7 @@ export async function POST(request: NextRequest) {
       },
       include: {
         routes: {
-          select: {
-            id: true,
-            routeName: true,
-            status: true,
-          },
+          select: { id: true, routeName: true, status: true },
         },
       },
     })

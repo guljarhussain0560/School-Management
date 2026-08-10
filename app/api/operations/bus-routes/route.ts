@@ -46,31 +46,15 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
         include: {
           bus: {
-            select: {
-              id: true,
-              busNumber: true,
-              busName: true,
-              driverName: true,
-              capacity: true
-            }
+            select: { id: true, busNumber: true, busName: true, driverName: true, capacity: true }
           },
           manager: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
+            select: { id: true, name: true, email: true }
           },
           students: {
-            select: {
-              id: true,
-              studentId: true,
-              name: true,
-              class: {
+            select: { id: true, studentId: true, name: true, class: {
                 select: {
-                  className: true,
-                  classCode: true
-                }
+                  classCode: true, sectionName: true }
               }
             }
           }
@@ -164,31 +148,15 @@ export async function POST(request: NextRequest) {
       },
       include: {
         bus: {
-          select: {
-            id: true,
-            busNumber: true,
-            busName: true,
-            driverName: true,
-            capacity: true
-          }
+          select: { id: true, busNumber: true, busName: true, driverName: true, capacity: true }
         },
         manager: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+          select: { id: true, name: true, email: true }
         },
           students: {
-            select: {
-              id: true,
-              studentId: true,
-              name: true,
-              class: {
+            select: { id: true, studentId: true, name: true, class: {
                 select: {
-                  className: true,
-                  classCode: true
-                }
+                  classCode: true, sectionName: true }
               }
             }
           }

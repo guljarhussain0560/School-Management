@@ -36,16 +36,10 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         subject: {
-          select: {
-            id: true,
-            subjectName: true
-          }
+          select: { id: true, subjectName: true }
         },
         class: {
-          select: {
-            id: true,
-            className: true
-          }
+          select: { id: true, classCode: true, sectionName: true }
         },
         schedules: {
           where: { isActive: true },
@@ -54,11 +48,7 @@ export async function GET(request: NextRequest) {
         results: {
           include: {
             student: {
-              select: {
-                id: true,
-                name: true,
-                rollNumber: true
-              }
+              select: { id: true, name: true, rollNumber: true }
             }
           }
         }
@@ -158,16 +148,10 @@ export async function POST(request: NextRequest) {
       },
       include: {
         subject: {
-          select: {
-            id: true,
-            subjectName: true
-          }
+          select: { id: true, subjectName: true }
         },
         class: {
-          select: {
-            id: true,
-            className: true
-          }
+          select: { id: true, classCode: true, sectionName: true }
         }
       }
     });
