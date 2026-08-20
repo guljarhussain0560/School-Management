@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { recordAttendanceSchema } from '@/lib/validation'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,17 +16,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { date, grade, subject, attendanceRecords } = body
-
-    console.log('Attendance data received:', { date, grade, subject, attendanceRecords })
-
-    // Validate required fields
-    if (!date || !grade || !subject || !attendanceRecords) {
+    const validation = recordAttendanceSchema.safeParse(body)
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Date, grade, subject, and attendance records are required' },
+        { error: validation.error.errors[0]?.message || 'Invalid attendance payload' },
         { status: 400 }
       )
     }
+
+    const { date, grade, subject, attendanceRecords } = validation.data
 
     // Check if attendance already exists for this date (simplified check)
     try {
@@ -53,10 +52,11 @@ export async function POST(request: NextRequest) {
         id: { in: studentIds },
         schoolId: session.user.schoolId!
       },
-      select: { id: true }
+      select: { id: true, classId: true }
     })
 
     const existingStudentIds = existingStudents.map(s => s.id)
+    const studentClassMap = new Map(existingStudents.map(s => [s.id, s.classId]))
     const invalidStudentIds = studentIds.filter((id: string) => !existingStudentIds.includes(id))
     
     if (invalidStudentIds.length > 0) {
@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
     // Create attendance records
     const attendanceData = attendanceRecords.map((record: any) => ({
       studentId: record.studentId,
+      classId: studentClassMap.get(record.studentId) || '',
       date: new Date(date),
       isPresent: record.status === 'PRESENT', // Convert to boolean
       schoolId: session.user.schoolId || "",
