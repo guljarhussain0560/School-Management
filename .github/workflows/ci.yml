@@ -34,12 +34,11 @@ jobs:
         run: npm run lint
 
   # ============================================================================
-  # TypeScript Typechecking
+  # Strict TypeScript Typechecking (Enforced Gating)
   # ============================================================================
   typecheck:
     name: Type Checking
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -56,8 +55,8 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
-      - name: Run TypeScript Check
-        run: npx tsc --noEmit --skipLibCheck || true
+      - name: Run Strict TypeScript Check
+        run: npm run typecheck
 
   # ============================================================================
   # Automated Tests & Coverage
@@ -87,10 +86,9 @@ jobs:
   # ============================================================================
   # Security Audit
   # ============================================================================
-  security-audit:
-    name: Dependency Security Audit
+  security:
+    name: Security Vulnerability Scan
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -101,21 +99,19 @@ jobs:
           node-version: 20
           cache: 'npm'
 
-      - name: Audit Dependencies
-        run: npm audit --audit-level=critical || true
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Security Audit
+        run: npm audit --audit-level=high
 
   # ============================================================================
-  # Production Build
+  # Production Application Build
   # ============================================================================
   build:
-    name: Next.js Production Build
-    needs: [lint, test]
+    name: Production Build
     runs-on: ubuntu-latest
-    env:
-      NEXT_TELEMETRY_DISABLED: 1
-      DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
-      NEXTAUTH_SECRET: "ci-dummy-secret-key-for-build-validation"
-      NEXTAUTH_URL: "http://localhost:3000"
+    needs: [lint, typecheck, test]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -134,3 +130,7 @@ jobs:
 
       - name: Build Next.js Application
         run: npm run build
+        env:
+          NEXTAUTH_SECRET: 'ci-build-test-secret-key-32chars-minimum'
+          NEXTAUTH_URL: 'http://localhost:3000'
+          DATABASE_URL: 'postgresql://mock:mock@localhost:5432/mock_school_db'
