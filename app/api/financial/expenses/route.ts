@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { createExpenseSchema } from '@/lib/validation'
 
 export async function GET(request: NextRequest) {
   try {
@@ -107,16 +108,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const formData = await request.formData()
-    const department = formData.get('department') as string
-    const amount = formData.get('amount') as string
-    const description = formData.get('description') as string
-    const receipt = formData.get('receipt') as File | null
+    let department = ''
+    let amount = ''
+    let description = ''
+    let receipt: File | null = null
 
-    // Validation
-    if (!department || !amount || !description) {
+    const contentType = request.headers.get('content-type') || ''
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData()
+      department = (formData.get('department') as string) || ''
+      amount = (formData.get('amount') as string) || ''
+      description = (formData.get('description') as string) || ''
+      receipt = formData.get('receipt') as File | null
+    } else {
+      const json = await request.json()
+      department = json.department || ''
+      amount = json.amount ? json.amount.toString() : ''
+      description = json.description || ''
+    }
+
+    const validation = createExpenseSchema.safeParse({ department, amount, description })
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Department, amount, and description are required' },
+        { error: validation.error.errors[0]?.message || 'Department, amount, and description are required' },
         { status: 400 }
       )
     }
