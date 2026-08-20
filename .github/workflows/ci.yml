@@ -80,8 +80,8 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
-      - name: Run Vitest Suite
-        run: npm test
+      - name: Run Enforced Test Coverage Suite
+        run: npm run test:coverage
 
   # ============================================================================
   # Security Audit

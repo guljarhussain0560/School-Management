@@ -11,13 +11,36 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
+      include: [
+        'lib/**/*.ts',
+        'components/admin/admissions/**/*.ts',
+        'components/admin/employee/**/*.ts',
+        'components/operations/**/*.ts',
+        'components/academic/curriculum/**/*.ts'
+      ],
       exclude: [
         'node_modules/',
         '.next/',
         'vitest.config.ts',
         'vitest.setup.ts',
-        '**/*.d.ts'
-      ]
+        '**/*.d.ts',
+        '**/*.test.ts',
+        '**/*.test.tsx',
+        '**/*.spec.ts',
+        '**/*.spec.tsx',
+        'lib/prisma.ts',
+        'lib/email.ts',
+        'lib/excel-utils.ts',
+        'lib/pdf-receipt.ts',
+        'lib/salary-slip-pdf.ts',
+        'lib/auth.ts'
+      ],
+      thresholds: {
+        lines: 60,
+        statements: 60,
+        branches: 60,
+        functions: 60,
+      }
     },
     include: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}']
   },
