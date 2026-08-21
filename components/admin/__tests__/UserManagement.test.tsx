@@ -48,9 +48,10 @@ describe('UserManagement Component', () => {
 
     await waitFor(() => {
       expect(logger.error).toHaveBeenCalledWith(
-        expect.stringContaining('Exception fetching users:'),
+        expect.stringContaining('Exception fetching User:'),
         expect.anything()
       )
     })
+
   })
 })

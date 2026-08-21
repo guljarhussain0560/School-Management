@@ -15,6 +15,8 @@ import { logger } from '@/lib/logger'
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api-client'
 
 
+import { useCrudResource } from '@/lib/hooks/useCrudResource'
+
 interface User {
   id: string
   name: string
@@ -47,8 +49,20 @@ interface UserManagementProps {
 }
 
 export default function UserManagement({ onUserUpdate }: UserManagementProps) {
-  const [users, setUsers] = useState<User[]>([])
-  const [loading, setLoading] = useState(true)
+  const {
+    items: users,
+    isLoading: loading,
+    fetchItems,
+    createItem,
+    updateItem,
+    deleteItem,
+  } = useCrudResource<User>({
+    baseEndpoint: '/api/users',
+    resourceName: 'User',
+    transformResponse: (data: any) => data?.users || [],
+  })
+
+
   const [searchTerm, setSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState<string>('all')
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
@@ -61,23 +75,6 @@ export default function UserManagement({ onUserUpdate }: UserManagementProps) {
     role: 'TEACHER'
   })
 
-  // Fetch users
-  const fetchUsers = async () => {
-    try {
-      setLoading(true)
-      const data = await apiGet<{ users: User[] }>('/api/users', { context: 'UserManagement' })
-      setUsers(data?.users || [])
-    } catch (error) {
-      logger.error('Exception fetching users:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchUsers()
-  }, [])
-
   // Filter users
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -89,18 +86,11 @@ export default function UserManagement({ onUserUpdate }: UserManagementProps) {
   // Create user
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault()
-    try {
-      await apiPost('/api/users', formData, {
-        showSuccessToast: true,
-        successMessage: 'User created successfully',
-        context: 'UserManagement',
-      })
+    const result = await createItem(formData)
+    if (result) {
       setIsCreateDialogOpen(false)
       setFormData({ name: '', email: '', password: '', role: 'TEACHER' })
-      fetchUsers()
       onUserUpdate?.()
-    } catch (error) {
-      logger.error('Exception creating user:', error)
     }
   }
 
@@ -109,36 +99,23 @@ export default function UserManagement({ onUserUpdate }: UserManagementProps) {
     e.preventDefault()
     if (!editingUser) return
 
-    try {
-      await apiPut(`/api/users/${editingUser.id}`, formData, {
-        showSuccessToast: true,
-        successMessage: 'User updated successfully',
-        context: 'UserManagement',
-      })
+    const result = await updateItem(editingUser.id, formData)
+    if (result) {
       setIsEditDialogOpen(false)
       setEditingUser(null)
       setFormData({ name: '', email: '', password: '', role: 'TEACHER' })
-      fetchUsers()
       onUserUpdate?.()
-    } catch (error) {
-      logger.error('Exception updating user:', error)
     }
   }
 
   // Delete user
   const handleDeleteUser = async (userId: string) => {
-    try {
-      await apiDelete(`/api/users/${userId}`, {
-        showSuccessToast: true,
-        successMessage: 'User deleted successfully',
-        context: 'UserManagement',
-      })
-      fetchUsers()
+    const success = await deleteItem(userId)
+    if (success) {
       onUserUpdate?.()
-    } catch (error) {
-      logger.error('Exception deleting user:', error)
     }
   }
+
 
   // Open edit dialog
   const openEditDialog = (user: User) => {

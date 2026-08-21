@@ -118,7 +118,7 @@ describe('/api/academic/students Route Handlers', () => {
       expect(res.status).toBe(403)
     })
 
-    it('returns 400 when required fields are missing', async () => {
+    it('returns 400 with VALIDATION_ERROR code and issues when required fields are missing', async () => {
       const req = new NextRequest('http://localhost:3000/api/academic/students', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -127,7 +127,13 @@ describe('/api/academic/students Route Handlers', () => {
 
       const res = await POST(req)
       expect(res.status).toBe(400)
+      const json = await res.json()
+      expect(json.success).toBe(false)
+      expect(json.code).toBe('VALIDATION_ERROR')
+      expect(json.details).toBeInstanceOf(Array)
+      expect(json.details.length).toBeGreaterThan(0)
     })
+
 
     it('creates student successfully with valid JSON body', async () => {
       vi.mocked(prisma.student.create).mockResolvedValueOnce({

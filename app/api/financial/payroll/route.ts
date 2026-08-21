@@ -4,17 +4,20 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createPayrollSchema } from '@/lib/validation'
 import { logger } from '@/lib/logger'
+import { handleApiError } from '@/lib/api-handler'
+import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError, BadRequestError } from '@/lib/errors'
 import * as XLSX from 'xlsx'
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session || !session.user?.schoolId || !session.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      throw new UnauthorizedError('Unauthorized')
     }
     if (session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      throw new ForbiddenError('Forbidden')
     }
+
 
     const contentType = request.headers.get('content-type')
     
@@ -227,20 +230,18 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error) {
-    logger.error('Error in payroll upload:', error)
-    return NextResponse.json(
-      { error: 'Failed to process payroll upload' },
-      { status: 500 }
-    )
+    return handleApiError(error, request)
   }
 }
+
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session || !session.user?.schoolId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      throw new UnauthorizedError('Authentication required')
     }
+
 
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
@@ -376,10 +377,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    logger.error('Get payroll records error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleApiError(error, request)
   }
 }
+

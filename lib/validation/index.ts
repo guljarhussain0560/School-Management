@@ -1,8 +1,10 @@
 export * from './employee'
 export * from './academic'
+export * from './student'
 export * from './operations'
 export * from './auth'
 export * from './financial'
+
 
 import { ZodSchema, ZodError } from 'zod'
 
