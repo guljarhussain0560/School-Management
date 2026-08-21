@@ -4,7 +4,12 @@ import { Inter } from 'next/font/google';
 import SessionProvider from '@/components/providers/SessionProvider';
 import ToasterProvider from '@/components/providers/ToasterProvider';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ 
+  subsets: ['latin'],
+  display: 'swap',
+  preload: false,
+});
+
 
 export const metadata: Metadata = {
   title: 'School Management System',
