@@ -1,5 +1,6 @@
 'use client'
 
+import { logger } from '@/lib/logger'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -96,7 +97,7 @@ export default function StudentFeeDetails({ studentId: propStudentId }: StudentF
         setStudents(data.students || [])
       }
     } catch (error) {
-      console.error('Error fetching students:', error)
+      logger.error('Error fetching students:', error)
     }
   }
 
@@ -114,7 +115,7 @@ export default function StudentFeeDetails({ studentId: propStudentId }: StudentF
         toast.error('Failed to fetch student fee details')
       }
     } catch (error) {
-      console.error('Error fetching student fee details:', error)
+      logger.error('Error fetching student fee details:', error)
       toast.error('Error fetching student fee details')
     } finally {
       setLoading(false)

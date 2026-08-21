@@ -1,5 +1,6 @@
 'use client'
 
+import { logger } from '@/lib/logger'
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -103,7 +104,7 @@ const ExamManagement: React.FC = () => {
         setExams(data.exams || []);
       }
     } catch (error) {
-      console.error('Error fetching exams:', error);
+      logger.error('Error fetching exams:', error);
       toast.error('Failed to fetch exams');
     } finally {
       setLoading(false);
@@ -118,7 +119,7 @@ const ExamManagement: React.FC = () => {
         setSubjects(data.subjects || []);
       }
     } catch (error) {
-      console.error('Error fetching subjects:', error);
+      logger.error('Error fetching subjects:', error);
     }
   };
 
@@ -130,7 +131,7 @@ const ExamManagement: React.FC = () => {
         setClasses(data.classes || []);
       }
     } catch (error) {
-      console.error('Error fetching classes:', error);
+      logger.error('Error fetching classes:', error);
     }
   };
 
@@ -151,7 +152,7 @@ const ExamManagement: React.FC = () => {
         toast.error(error.error || 'Failed to create exam');
       }
     } catch (error) {
-      console.error('Error creating exam:', error);
+      logger.error('Error creating exam:', error);
       toast.error('Failed to create exam');
     }
   };
@@ -172,7 +173,7 @@ const ExamManagement: React.FC = () => {
         toast.error(error.error || 'Failed to create exams');
       }
     } catch (error) {
-      console.error('Error creating exams:', error);
+      logger.error('Error creating exams:', error);
       toast.error('Failed to create exams');
     }
   };
@@ -192,7 +193,7 @@ const ExamManagement: React.FC = () => {
         toast.error('Failed to delete exam');
       }
     } catch (error) {
-      console.error('Error deleting exam:', error);
+      logger.error('Error deleting exam:', error);
       toast.error('Failed to delete exam');
     }
   };

@@ -1,5 +1,6 @@
 'use client'
 
+import { logger } from '@/lib/logger'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -81,7 +82,7 @@ export default function TeacherAssignments() {
         toast.error('Failed to fetch teacher assignments')
       }
     } catch (error) {
-      console.error('Error fetching teacher assignments:', error)
+      logger.error('Error fetching teacher assignments:', error)
       toast.error('Error fetching teacher assignments')
     } finally {
       setLoading(false)
@@ -96,7 +97,7 @@ export default function TeacherAssignments() {
         setTeachers(data.users || [])
       }
     } catch (error) {
-      console.error('Error fetching teachers:', error)
+      logger.error('Error fetching teachers:', error)
     }
   }
 
@@ -108,7 +109,7 @@ export default function TeacherAssignments() {
         setSubjects(data.subjects || [])
       }
     } catch (error) {
-      console.error('Error fetching subjects:', error)
+      logger.error('Error fetching subjects:', error)
     }
   }
 
@@ -120,7 +121,7 @@ export default function TeacherAssignments() {
         setClasses(data.classes || [])
       }
     } catch (error) {
-      console.error('Error fetching classes:', error)
+      logger.error('Error fetching classes:', error)
     }
   }
 
@@ -145,7 +146,7 @@ export default function TeacherAssignments() {
         toast.error(error.error || 'Failed to create teacher assignment')
       }
     } catch (error) {
-      console.error('Error creating teacher assignment:', error)
+      logger.error('Error creating teacher assignment:', error)
       toast.error('Error creating teacher assignment')
     } finally {
       setLoading(false)
@@ -165,7 +166,7 @@ export default function TeacherAssignments() {
         toast.error('Failed to delete teacher assignment')
       }
     } catch (error) {
-      console.error('Error deleting teacher assignment:', error)
+      logger.error('Error deleting teacher assignment:', error)
       toast.error('Error deleting teacher assignment')
     }
   }

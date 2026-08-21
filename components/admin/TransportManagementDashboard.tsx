@@ -1,5 +1,6 @@
 'use client'
 
+import { logger } from '@/lib/logger'
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -142,7 +143,7 @@ export default function TransportManagementDashboard({ activeSubSection, setActi
         toast.error('Failed to fetch safety alerts');
       }
     } catch (error) {
-      console.error('Error fetching safety alerts:', error);
+      logger.error('Error fetching safety alerts:', error);
       toast.error('Error fetching safety alerts');
     } finally {
       setIsLoadingAlerts(false);
@@ -174,7 +175,7 @@ export default function TransportManagementDashboard({ activeSubSection, setActi
         toast.error(error.error || 'Failed to create safety alert');
       }
     } catch (error) {
-      console.error('Error creating safety alert:', error);
+      logger.error('Error creating safety alert:', error);
       toast.error('Error creating safety alert');
     }
   };

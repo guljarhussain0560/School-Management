@@ -1,5 +1,6 @@
 'use client'
 
+import { logger } from '@/lib/logger'
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -121,7 +122,7 @@ const FormWithExcel: React.FC<FormWithExcelProps> = ({
       toast.success('Data submitted successfully');
       setFormData(initialData);
     } catch (error) {
-      console.error('Submit error:', error);
+      logger.error('Submit error:', error);
       toast.error('Failed to submit data');
     } finally {
       setIsSubmitting(false);
@@ -141,7 +142,7 @@ const FormWithExcel: React.FC<FormWithExcelProps> = ({
       setUploadResult(null);
       setShowBulkUpload(false);
     } catch (error) {
-      console.error('Bulk submit error:', error);
+      logger.error('Bulk submit error:', error);
       toast.error('Failed to submit bulk data');
     } finally {
       setIsSubmitting(false);

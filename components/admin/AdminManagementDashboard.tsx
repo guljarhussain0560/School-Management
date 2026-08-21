@@ -301,12 +301,7 @@ export default function AdminManagementDashboard() {
         );
         
       case 'school-management':
-        return (
-          <SchoolManagement 
-            activeSubSection={activeSubSection}
-            setActiveSubSection={setActiveSubSection}
-          />
-        );
+        return <SchoolManagement />;
         
       case 'reports':
         return (

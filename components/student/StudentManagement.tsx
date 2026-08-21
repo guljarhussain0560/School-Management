@@ -1,5 +1,6 @@
 'use client'
 
+import { logger } from '@/lib/logger'
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -110,7 +111,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
         toast.error('Failed to fetch students');
       }
     } catch (error) {
-      console.error('Error fetching students:', error);
+      logger.error('Error fetching students:', error);
       toast.error('Error fetching students');
     } finally {
       setIsLoading(false);
@@ -125,7 +126,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
         setClasses(data.classes || []);
       }
     } catch (error) {
-      console.error('Error fetching classes:', error);
+      logger.error('Error fetching classes:', error);
     }
   };
 
@@ -137,7 +138,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
         setBatches(data.batches || []);
       }
     } catch (error) {
-      console.error('Error fetching batches:', error);
+      logger.error('Error fetching batches:', error);
     }
   };
 
@@ -171,7 +172,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
         toast.error(error.error || 'Failed to update student');
       }
     } catch (error) {
-      console.error('Error updating student:', error);
+      logger.error('Error updating student:', error);
       toast.error('Error updating student');
     }
   };
@@ -429,7 +430,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({
                     toast.error(error.error || 'Failed to create student');
                   }
                 } catch (error) {
-                  console.error('Error creating student:', error);
+                  logger.error('Error creating student:', error);
                   toast.error('Error creating student');
                 }
               }}

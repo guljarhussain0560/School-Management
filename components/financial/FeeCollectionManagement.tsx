@@ -1,5 +1,6 @@
 'use client'
 
+import { logger } from '@/lib/logger'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -134,7 +135,7 @@ export default function FeeCollectionManagement() {
         toast.error('Failed to fetch fee collections')
       }
     } catch (error) {
-      console.error('Error fetching fee collections:', error)
+      logger.error('Error fetching fee collections:', error)
       toast.error('Error fetching fee collections')
     } finally {
       setLoading(false)
@@ -149,7 +150,7 @@ export default function FeeCollectionManagement() {
         setStudents(data.students || [])
       }
     } catch (error) {
-      console.error('Error fetching students:', error)
+      logger.error('Error fetching students:', error)
     }
   }
 
@@ -161,7 +162,7 @@ export default function FeeCollectionManagement() {
         setFeeStructures(data.feeStructures || [])
       }
     } catch (error) {
-      console.error('Error fetching fee structures:', error)
+      logger.error('Error fetching fee structures:', error)
     }
   }
 
@@ -186,7 +187,7 @@ export default function FeeCollectionManagement() {
         toast.error(error.error || 'Failed to record fee collection')
       }
     } catch (error) {
-      console.error('Error creating fee collection:', error)
+      logger.error('Error creating fee collection:', error)
       toast.error('Error creating fee collection')
     } finally {
       setLoading(false)

@@ -1,5 +1,6 @@
 'use client'
 
+import { logger } from '@/lib/logger'
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -43,7 +44,7 @@ export default function BatchManagementDashboard({
         setRecentBatches(data.recentBatches || []);
       }
     } catch (error) {
-      console.error('Error fetching batch stats:', error);
+      logger.error('Error fetching batch stats:', error);
     }
   };
 

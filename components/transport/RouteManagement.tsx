@@ -1,5 +1,6 @@
 'use client'
 
+import { logger } from '@/lib/logger'
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -76,7 +77,7 @@ const RouteManagement: React.FC = () => {
         setRoutes(data.routes || []);
       }
     } catch (error) {
-      console.error('Error fetching routes:', error);
+      logger.error('Error fetching routes:', error);
       toast.error('Failed to fetch routes');
     } finally {
       setLoading(false);
@@ -100,7 +101,7 @@ const RouteManagement: React.FC = () => {
         toast.error(error.error || 'Failed to create route');
       }
     } catch (error) {
-      console.error('Error creating route:', error);
+      logger.error('Error creating route:', error);
       toast.error('Failed to create route');
     }
   };
@@ -121,7 +122,7 @@ const RouteManagement: React.FC = () => {
         toast.error(error.error || 'Failed to create routes');
       }
     } catch (error) {
-      console.error('Error creating routes:', error);
+      logger.error('Error creating routes:', error);
       toast.error('Failed to create routes');
     }
   };
@@ -141,7 +142,7 @@ const RouteManagement: React.FC = () => {
         toast.error('Failed to delete route');
       }
     } catch (error) {
-      console.error('Error deleting route:', error);
+      logger.error('Error deleting route:', error);
       toast.error('Failed to delete route');
     }
   };

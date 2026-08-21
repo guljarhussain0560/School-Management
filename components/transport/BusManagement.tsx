@@ -1,5 +1,6 @@
 'use client'
 
+import { logger } from '@/lib/logger'
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -77,7 +78,7 @@ const BusManagement: React.FC = () => {
         setBuses(data.buses || []);
       }
     } catch (error) {
-      console.error('Error fetching buses:', error);
+      logger.error('Error fetching buses:', error);
       toast.error('Failed to fetch buses');
     } finally {
       setLoading(false);
@@ -92,7 +93,7 @@ const BusManagement: React.FC = () => {
         setRoutes(data.routes || []);
       }
     } catch (error) {
-      console.error('Error fetching routes:', error);
+      logger.error('Error fetching routes:', error);
     }
   };
 
@@ -113,7 +114,7 @@ const BusManagement: React.FC = () => {
         toast.error(error.error || 'Failed to create bus');
       }
     } catch (error) {
-      console.error('Error creating bus:', error);
+      logger.error('Error creating bus:', error);
       toast.error('Failed to create bus');
     }
   };
@@ -134,7 +135,7 @@ const BusManagement: React.FC = () => {
         toast.error(error.error || 'Failed to create buses');
       }
     } catch (error) {
-      console.error('Error creating buses:', error);
+      logger.error('Error creating buses:', error);
       toast.error('Failed to create buses');
     }
   };
@@ -154,7 +155,7 @@ const BusManagement: React.FC = () => {
         toast.error('Failed to delete bus');
       }
     } catch (error) {
-      console.error('Error deleting bus:', error);
+      logger.error('Error deleting bus:', error);
       toast.error('Failed to delete bus');
     }
   };

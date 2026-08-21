@@ -1,5 +1,6 @@
 'use client'
 
+import { logger } from '@/lib/logger'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, GraduationCap, Truck, Shield, TrendingUp, Activity } from 'lucide-react'
@@ -44,7 +45,7 @@ export default function AdminStats() {
           })
         }
       } catch (error) {
-        console.error('Error fetching stats:', error)
+        logger.error('Error fetching stats:', error)
       } finally {
         setLoading(false)
       }

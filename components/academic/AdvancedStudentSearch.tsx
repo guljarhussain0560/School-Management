@@ -1,5 +1,6 @@
 'use client'
 
+import { logger } from '@/lib/logger'
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -131,7 +132,7 @@ export default function AdvancedStudentSearch() {
         setBatches(data.batches || []);
       }
     } catch (error) {
-      console.error('Error fetching batches:', error);
+      logger.error('Error fetching batches:', error);
     }
   };
 
@@ -147,7 +148,7 @@ export default function AdvancedStudentSearch() {
         setGrades(data.grades || []);
       }
     } catch (error) {
-      console.error('Error fetching grades:', error);
+      logger.error('Error fetching grades:', error);
     }
   };
 
@@ -163,7 +164,7 @@ export default function AdvancedStudentSearch() {
         setSections(data.sections || []);
       }
     } catch (error) {
-      console.error('Error fetching sections:', error);
+      logger.error('Error fetching sections:', error);
     }
   };
 
@@ -192,7 +193,7 @@ export default function AdvancedStudentSearch() {
         toast.error('Failed to search students');
       }
     } catch (error) {
-      console.error('Error searching students:', error);
+      logger.error('Error searching students:', error);
       toast.error('Error searching students');
     } finally {
       setIsLoading(false);

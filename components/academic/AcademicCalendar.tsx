@@ -1,5 +1,6 @@
 'use client'
 
+import { logger } from '@/lib/logger'
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -75,7 +76,7 @@ const AcademicCalendar: React.FC = () => {
         setEvents(data.events || []);
       }
     } catch (error) {
-      console.error('Error fetching events:', error);
+      logger.error('Error fetching events:', error);
       toast.error('Failed to fetch calendar events');
     } finally {
       setLoading(false);
@@ -90,7 +91,7 @@ const AcademicCalendar: React.FC = () => {
         setClasses(data.classes || []);
       }
     } catch (error) {
-      console.error('Error fetching classes:', error);
+      logger.error('Error fetching classes:', error);
     }
   };
 
@@ -102,7 +103,7 @@ const AcademicCalendar: React.FC = () => {
         setSubjects(data.subjects || []);
       }
     } catch (error) {
-      console.error('Error fetching subjects:', error);
+      logger.error('Error fetching subjects:', error);
     }
   };
 
@@ -123,7 +124,7 @@ const AcademicCalendar: React.FC = () => {
         toast.error(error.error || 'Failed to create event');
       }
     } catch (error) {
-      console.error('Error creating event:', error);
+      logger.error('Error creating event:', error);
       toast.error('Failed to create event');
     }
   };
@@ -144,7 +145,7 @@ const AcademicCalendar: React.FC = () => {
         toast.error(error.error || 'Failed to create events');
       }
     } catch (error) {
-      console.error('Error creating events:', error);
+      logger.error('Error creating events:', error);
       toast.error('Failed to create events');
     }
   };
@@ -164,7 +165,7 @@ const AcademicCalendar: React.FC = () => {
         toast.error('Failed to delete event');
       }
     } catch (error) {
-      console.error('Error deleting event:', error);
+      logger.error('Error deleting event:', error);
       toast.error('Failed to delete event');
     }
   };
