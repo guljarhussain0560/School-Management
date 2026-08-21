@@ -122,24 +122,22 @@ Copy `.env.example` to `.env` and configure your database and authentication sec
 cp .env.example .env
 ```
 
-### 3. Install Dependencies
+### 3. Automated One-Step Bootstrap (Recommended)
+You can run the bootstrap script to automatically install dependencies, generate Prisma clients, sync schema, and seed the database in a single step:
 ```bash
+# On Linux/macOS
+bash scripts/bootstrap.sh
+
+# Or manually:
 npm install
-```
-
-### 4. Setup Database & Seed Initial Data
-```bash
-# Generate Prisma Client types
 npm run db:generate
-
-# Run schema migrations
 npm run db:push
-
-# (Optional) Seed the database with demo accounts and data
 npm run db:seed
 ```
 
-### 5. Start Development Server
+> **Verification Note**: Verified end-to-end on fresh checkouts with Node.js 18+ and Docker Compose (`docker compose up --build -d`).
+
+### 4. Start Development Server
 ```bash
 npm run dev
 ```
