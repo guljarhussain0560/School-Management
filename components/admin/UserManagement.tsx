@@ -11,8 +11,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { Plus, Search, Edit, Trash2, Users, GraduationCap, Truck } from 'lucide-react'
 import { toast } from 'sonner'
-
 import { logger } from '@/lib/logger'
+import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api-client'
+
 
 interface User {
   id: string
@@ -63,18 +64,11 @@ export default function UserManagement({ onUserUpdate }: UserManagementProps) {
   // Fetch users
   const fetchUsers = async () => {
     try {
-      const response = await fetch('/api/users')
-      if (response.ok) {
-        const data = await response.json()
-        setUsers(data.users || [])
-      } else {
-        const errorData = await response.json().catch(() => ({}))
-        logger.error('Failed to fetch users:', { status: response.status, error: errorData })
-        toast.error('Failed to fetch users')
-      }
+      setLoading(true)
+      const data = await apiGet<{ users: User[] }>('/api/users', { context: 'UserManagement' })
+      setUsers(data?.users || [])
     } catch (error) {
       logger.error('Exception fetching users:', error)
-      toast.error('Error fetching users')
     } finally {
       setLoading(false)
     }
@@ -96,26 +90,17 @@ export default function UserManagement({ onUserUpdate }: UserManagementProps) {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const response = await fetch('/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+      await apiPost('/api/users', formData, {
+        showSuccessToast: true,
+        successMessage: 'User created successfully',
+        context: 'UserManagement',
       })
-
-      if (response.ok) {
-        toast.success('User created successfully')
-        setIsCreateDialogOpen(false)
-        setFormData({ name: '', email: '', password: '', role: 'TEACHER' })
-        fetchUsers()
-        onUserUpdate?.()
-      } else {
-        const error = await response.json()
-        logger.error('Failed to create user:', { error, formData })
-        toast.error(error.error || 'Failed to create user')
-      }
+      setIsCreateDialogOpen(false)
+      setFormData({ name: '', email: '', password: '', role: 'TEACHER' })
+      fetchUsers()
+      onUserUpdate?.()
     } catch (error) {
       logger.error('Exception creating user:', error)
-      toast.error('Error creating user')
     }
   }
 
@@ -125,49 +110,33 @@ export default function UserManagement({ onUserUpdate }: UserManagementProps) {
     if (!editingUser) return
 
     try {
-      const response = await fetch(`/api/users/${editingUser.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+      await apiPut(`/api/users/${editingUser.id}`, formData, {
+        showSuccessToast: true,
+        successMessage: 'User updated successfully',
+        context: 'UserManagement',
       })
-
-      if (response.ok) {
-        toast.success('User updated successfully')
-        setIsEditDialogOpen(false)
-        setEditingUser(null)
-        setFormData({ name: '', email: '', password: '', role: 'TEACHER' })
-        fetchUsers()
-        onUserUpdate?.()
-      } else {
-        const error = await response.json()
-        logger.error('Failed to update user:', { error, userId: editingUser.id })
-        toast.error(error.error || 'Failed to update user')
-      }
+      setIsEditDialogOpen(false)
+      setEditingUser(null)
+      setFormData({ name: '', email: '', password: '', role: 'TEACHER' })
+      fetchUsers()
+      onUserUpdate?.()
     } catch (error) {
       logger.error('Exception updating user:', error)
-      toast.error('Error updating user')
     }
   }
 
   // Delete user
   const handleDeleteUser = async (userId: string) => {
     try {
-      const response = await fetch(`/api/users/${userId}`, {
-        method: 'DELETE'
+      await apiDelete(`/api/users/${userId}`, {
+        showSuccessToast: true,
+        successMessage: 'User deleted successfully',
+        context: 'UserManagement',
       })
-
-      if (response.ok) {
-        toast.success('User deleted successfully')
-        fetchUsers()
-        onUserUpdate?.()
-      } else {
-        const error = await response.json()
-        logger.error('Failed to delete user:', { error, userId })
-        toast.error(error.error || 'Failed to delete user')
-      }
+      fetchUsers()
+      onUserUpdate?.()
     } catch (error) {
       logger.error('Exception deleting user:', error)
-      toast.error('Error deleting user')
     }
   }
 

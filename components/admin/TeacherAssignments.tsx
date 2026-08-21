@@ -12,6 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { Plus, Search, Trash2, BookOpen } from 'lucide-react'
 import { toast } from 'sonner'
+import { apiGet, apiPost, apiDelete } from '@/lib/api-client'
+
 
 interface TeacherAssignment {
   id: string
@@ -67,18 +69,12 @@ export default function TeacherAssignments() {
   const fetchAssignments = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/academic/teacher-assignments')
-      if (response.ok) {
-        const data = await response.json()
-        setAssignments(data.assignments || [])
-      } else {
-        const errorData = await response.json().catch(() => ({}))
-        logger.error('Failed to fetch teacher assignments:', { status: response.status, error: errorData })
-        toast.error('Failed to fetch teacher assignments')
-      }
+      const data = await apiGet<{ assignments: TeacherAssignment[] }>('/api/academic/teacher-assignments', {
+        context: 'TeacherAssignments',
+      })
+      setAssignments(data?.assignments || [])
     } catch (error) {
       logger.error('Error fetching teacher assignments:', error)
-      toast.error('Error fetching teacher assignments')
     } finally {
       setLoading(false)
     }
@@ -86,14 +82,11 @@ export default function TeacherAssignments() {
 
   const fetchTeachers = async () => {
     try {
-      const response = await fetch('/api/users?role=TEACHER')
-      if (response.ok) {
-        const data = await response.json()
-        setTeachers(data.users || [])
-      } else {
-        const errorData = await response.json().catch(() => ({}))
-        logger.error('Failed to fetch teachers:', { status: response.status, error: errorData })
-      }
+      const data = await apiGet<{ users: Teacher[] }>('/api/users?role=TEACHER', {
+        showErrorToast: false,
+        context: 'TeacherAssignments',
+      })
+      setTeachers(data?.users || [])
     } catch (error) {
       logger.error('Error fetching teachers:', error)
     }
@@ -101,14 +94,11 @@ export default function TeacherAssignments() {
 
   const fetchSubjects = async () => {
     try {
-      const response = await fetch('/api/academic/subjects')
-      if (response.ok) {
-        const data = await response.json()
-        setSubjects(data.subjects || [])
-      } else {
-        const errorData = await response.json().catch(() => ({}))
-        logger.error('Failed to fetch subjects:', { status: response.status, error: errorData })
-      }
+      const data = await apiGet<{ subjects: any[] }>('/api/academic/subjects', {
+        showErrorToast: false,
+        context: 'TeacherAssignments',
+      })
+      setSubjects(data?.subjects || [])
     } catch (error) {
       logger.error('Error fetching subjects:', error)
     }
@@ -116,14 +106,11 @@ export default function TeacherAssignments() {
 
   const fetchClasses = async () => {
     try {
-      const response = await fetch('/api/academic/classes')
-      if (response.ok) {
-        const data = await response.json()
-        setClasses(data.classes || [])
-      } else {
-        const errorData = await response.json().catch(() => ({}))
-        logger.error('Failed to fetch classes:', { status: response.status, error: errorData })
-      }
+      const data = await apiGet<{ classes: any[] }>('/api/academic/classes', {
+        showErrorToast: false,
+        context: 'TeacherAssignments',
+      })
+      setClasses(data?.classes || [])
     } catch (error) {
       logger.error('Error fetching classes:', error)
     }
@@ -134,25 +121,16 @@ export default function TeacherAssignments() {
     setLoading(true)
 
     try {
-      const response = await fetch('/api/academic/teacher-assignments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+      await apiPost('/api/academic/teacher-assignments', formData, {
+        showSuccessToast: true,
+        successMessage: 'Teacher assignment created successfully',
+        context: 'TeacherAssignments',
       })
-
-      if (response.ok) {
-        toast.success('Teacher assignment created successfully')
-        setFormData({ teacherId: '', subjectId: '', classId: '' })
-        setIsCreateDialogOpen(false)
-        fetchAssignments()
-      } else {
-        const error = await response.json()
-        logger.error('Failed to create teacher assignment:', { error, formData })
-        toast.error(error.error || 'Failed to create teacher assignment')
-      }
+      setFormData({ teacherId: '', subjectId: '', classId: '' })
+      setIsCreateDialogOpen(false)
+      fetchAssignments()
     } catch (error) {
       logger.error('Error creating teacher assignment:', error)
-      toast.error('Error creating teacher assignment')
     } finally {
       setLoading(false)
     }
@@ -160,21 +138,14 @@ export default function TeacherAssignments() {
 
   const handleDeleteAssignment = async (assignmentId: string) => {
     try {
-      const response = await fetch(`/api/academic/teacher-assignments?id=${assignmentId}`, {
-        method: 'DELETE'
+      await apiDelete(`/api/academic/teacher-assignments?id=${assignmentId}`, {
+        showSuccessToast: true,
+        successMessage: 'Teacher assignment deleted successfully',
+        context: 'TeacherAssignments',
       })
-
-      if (response.ok) {
-        toast.success('Teacher assignment deleted successfully')
-        fetchAssignments()
-      } else {
-        const error = await response.json()
-        logger.error('Failed to delete teacher assignment:', { error, assignmentId })
-        toast.error(error.error || 'Failed to delete teacher assignment')
-      }
+      fetchAssignments()
     } catch (error) {
       logger.error('Error deleting teacher assignment:', error)
-      toast.error('Error deleting teacher assignment')
     }
   }
 
