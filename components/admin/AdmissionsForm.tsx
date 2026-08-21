@@ -13,6 +13,10 @@ import {
   CheckCircle, Clock, AlertCircle, Eye, UserPlus
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { downloadCsvTemplate } from '@/lib/excel-utils';
+import { apiPost } from '@/lib/api-client';
+
+
 
 const AdmissionsForm = () => {
   const [loading, setLoading] = useState(false);
@@ -49,31 +53,26 @@ const AdmissionsForm = () => {
     setLoading(true);
     
     try {
-      const response = await fetch('/api/academic/students', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: studentForm.fullName,
-          age: parseInt(studentForm.age),
-          grade: studentForm.grade,
-          rollNumber: `STU${Date.now()}`,
-          parentContact: studentForm.contactNumber,
-          address: studentForm.address,
-          email: studentForm.emailAddress
-        })
+      await apiPost('/api/academic/students', {
+        name: studentForm.fullName,
+        age: parseInt(studentForm.age) || 10,
+        grade: studentForm.grade,
+        rollNumber: `STU${Date.now()}`,
+        parentContact: studentForm.contactNumber,
+        address: studentForm.address,
+        email: studentForm.emailAddress
+      }, {
+        showSuccessToast: true,
+        successMessage: 'Student profile created successfully',
+        context: 'AdmissionsForm'
       });
 
-      if (response.ok) {
-        toast.success('Student profile created successfully');
-        setStudentForm({
-          fullName: '', age: '', grade: '', address: '',
-          parentName: '', contactNumber: '', emailAddress: '', idProof: null
-        });
-      } else {
-        toast.error('Failed to create student profile');
-      }
+      setStudentForm({
+        fullName: '', age: '', grade: '', address: '',
+        parentName: '', contactNumber: '', emailAddress: '', idProof: null
+      });
     } catch (error) {
-      toast.error('Error creating student profile');
+      // Handled by api-client
     } finally {
       setLoading(false);
     }
@@ -87,20 +86,7 @@ const AdmissionsForm = () => {
   };
 
   const downloadStudentTemplate = () => {
-    const templateData = [
-      ['Full Name', 'Age', 'Grade', 'Address', 'Parent/Guardian Name', 'Contact Number', 'Email Address'],
-      ['John Doe', '10', '5', '123 Main St', 'Jane Doe', '+1234567890', 'john@example.com'],
-      ['Jane Smith', '11', '6', '456 Oak Ave', 'Bob Smith', '+1234567891', 'jane@example.com']
-    ];
-    
-    const csvContent = templateData.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'student_admission_template.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
+    downloadCsvTemplate('student_admission', 'student_admission_template.csv')
   };
 
   const handleApplicationAction = (applicationId: number, action: string) => {

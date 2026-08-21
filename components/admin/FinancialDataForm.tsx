@@ -16,6 +16,8 @@ import {
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
 import { createFeeCollection } from '@/lib/api-client';
+import { downloadCsvTemplate } from '@/lib/excel-utils';
+
 
 
 interface Student {
@@ -129,20 +131,7 @@ const FinancialDataForm = () => {
   };
 
   const downloadPayrollTemplate = () => {
-    const templateData = [
-      ['Employee ID', 'Name', 'Department', 'Basic Salary', 'Allowances', 'Deductions', 'Net Salary'],
-      ['EMP001', 'John Doe', 'Teaching Staff', '50000', '10000', '5000', '55000'],
-      ['EMP002', 'Jane Smith', 'Administration', '45000', '8000', '4000', '49000']
-    ];
-    
-    const csvContent = templateData.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'payroll_template.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
+    downloadCsvTemplate('payroll', 'payroll_template.csv')
   };
 
   const filteredStudents = students.filter(student =>

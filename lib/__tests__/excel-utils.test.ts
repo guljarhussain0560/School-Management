@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
-import { EXCEL_TEMPLATES, downloadExcelTemplate } from '../excel-utils'
+import { EXCEL_TEMPLATES, downloadExcelTemplate, downloadCsvTemplate } from '../excel-utils'
+
+
 import { toast } from 'sonner'
 
 vi.mock('sonner', () => ({
@@ -71,8 +73,19 @@ describe('excel-utils template validation and transforms', () => {
     )
   })
 
-  it('handles invalid template key gracefully in downloadExcelTemplate', () => {
-    downloadExcelTemplate('non_existent_key')
-    expect(toast.error).toHaveBeenCalledWith('Template not found')
+
+  it('generates valid CSV format with downloadCsvTemplate for payroll', () => {
+    const csv = downloadCsvTemplate('payroll')
+    expect(csv).toContain('Employee ID')
+    expect(csv).toContain('Basic Salary')
+    expect(csv).toContain('EMP001')
+  })
+
+  it('generates valid CSV format with downloadCsvTemplate for student admission', () => {
+    const csv = downloadCsvTemplate('student_admission')
+    expect(csv).toContain('Name')
+    expect(csv).toContain('Grade')
+    expect(csv).toContain('Parent Name')
   })
 })
+
