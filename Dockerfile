@@ -18,6 +18,8 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN mkdir -p /app/public
+
 
 # Generate Prisma Client & Build Next.js
 ENV NEXT_TELEMETRY_DISABLED=1
