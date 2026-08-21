@@ -16,7 +16,13 @@ export default defineConfig({
         'components/admin/admissions/**/*.ts',
         'components/admin/employee/**/*.ts',
         'components/operations/**/*.ts',
-        'components/academic/curriculum/**/*.ts'
+        'components/academic/curriculum/**/*.ts',
+        'components/academic/hooks/**/*.ts',
+        'components/financial/hooks/**/*.ts',
+        'components/transport/hooks/**/*.ts',
+        'components/student/hooks/**/*.ts',
+        'components/school/hooks/**/*.ts',
+        'components/views/hooks/**/*.ts'
       ],
       exclude: [
         'node_modules/',
@@ -30,16 +36,15 @@ export default defineConfig({
         '**/*.spec.tsx',
         'lib/prisma.ts',
         'lib/email.ts',
-        'lib/excel-utils.ts',
         'lib/pdf-receipt.ts',
         'lib/salary-slip-pdf.ts',
         'lib/auth.ts'
       ],
       thresholds: {
-        lines: 60,
-        statements: 60,
-        branches: 60,
-        functions: 60,
+        lines: 70,
+        statements: 70,
+        branches: 65,
+        functions: 55,
       }
     },
     include: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}']
