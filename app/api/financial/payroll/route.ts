@@ -186,7 +186,9 @@ export async function POST(request: NextRequest) {
         }
 
         // Generate payroll ID
-        const payrollId = `${payrollData.department.substring(0, 3).toUpperCase()}${payrollData.year}${String(payrollData.month).padStart(2, '0')}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
+        const deptPrefix = (payrollData.department || 'EMP').substring(0, 3).toUpperCase();
+        const payrollId = `${deptPrefix}${payrollData.year}${String(payrollData.month).padStart(2, '0')}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
+
 
         // Create payroll record in database
         const payroll = await prisma.payroll.create({
