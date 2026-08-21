@@ -1,5 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { apiRequest, apiGet, apiPost, apiPut, apiDelete, ApiError } from '../api-client'
+import {
+  apiRequest,
+  apiGet,
+  apiPost,
+  apiPut,
+  apiDelete,
+  ApiError,
+  getStudents,
+  getClasses,
+  getSubjects,
+  getExams,
+  createExam,
+  deleteExam,
+  getBuses,
+  getRoutes,
+  createFeeCollection,
+} from '../api-client'
 import { toast } from 'sonner'
 
 vi.mock('sonner', () => ({
@@ -80,5 +96,40 @@ describe('api-client utility', () => {
 
     expect(putRes).toEqual({ success: true })
     expect(delRes).toEqual({ success: true })
+  })
+
+  it('domain functions execute correct endpoints with params', async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({ ok: true }),
+    } as any)
+
+    await getStudents({ page: '1' })
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/academic/students?page=1'), expect.anything())
+
+    await getClasses()
+    expect(fetch).toHaveBeenCalledWith('/api/academic/classes', expect.anything())
+
+    await getSubjects()
+    expect(fetch).toHaveBeenCalledWith('/api/academic/subjects', expect.anything())
+
+    await getExams()
+    expect(fetch).toHaveBeenCalledWith('/api/academic/exams', expect.anything())
+
+    await createExam({ examName: 'Final' })
+    expect(fetch).toHaveBeenCalledWith('/api/academic/exams', expect.objectContaining({ method: 'POST' }))
+
+    await deleteExam('ex-1')
+    expect(fetch).toHaveBeenCalledWith('/api/academic/exams?id=ex-1', expect.objectContaining({ method: 'DELETE' }))
+
+    await getBuses()
+    expect(fetch).toHaveBeenCalledWith('/api/transport/buses', expect.anything())
+
+    await getRoutes()
+    expect(fetch).toHaveBeenCalledWith('/api/transport/routes', expect.anything())
+
+    await createFeeCollection({ studentId: 's1' })
+    expect(fetch).toHaveBeenCalledWith('/api/financial/fee-collection', expect.objectContaining({ method: 'POST' }))
   })
 })

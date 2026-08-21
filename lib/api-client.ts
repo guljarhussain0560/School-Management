@@ -141,3 +141,61 @@ export async function apiPut<T = unknown>(url: string, body?: unknown, options: 
 export async function apiDelete<T = unknown>(url: string, options: ApiRequestOptions = {}): Promise<T> {
   return apiRequest<T>(url, { method: 'DELETE', ...options })
 }
+
+/**
+ * Domain API Helpers
+ */
+export async function getStudents(params?: Record<string, string | number>) {
+  const query = params ? `?${new URLSearchParams(params as Record<string, string>).toString()}` : ''
+  return apiGet<{ students: any[]; pagination?: any }>(`/api/academic/students${query}`, { context: 'getStudents' })
+}
+
+export async function getClasses(params?: Record<string, string | number>) {
+  const query = params ? `?${new URLSearchParams(params as Record<string, string>).toString()}` : ''
+  return apiGet<{ classes: any[]; pagination?: any }>(`/api/academic/classes${query}`, { context: 'getClasses' })
+}
+
+export async function getSubjects(params?: Record<string, string | number>) {
+  const query = params ? `?${new URLSearchParams(params as Record<string, string>).toString()}` : ''
+  return apiGet<{ subjects: any[]; pagination?: any }>(`/api/academic/subjects${query}`, { context: 'getSubjects' })
+}
+
+export async function getExams(params?: Record<string, string | number>) {
+  const query = params ? `?${new URLSearchParams(params as Record<string, string>).toString()}` : ''
+  return apiGet<{ exams: any[]; pagination?: any }>(`/api/academic/exams${query}`, { context: 'getExams' })
+}
+
+export async function createExam(payload: unknown) {
+  return apiPost<{ exam: any; message: string }>('/api/academic/exams', payload, {
+    showSuccessToast: true,
+    successMessage: 'Exam created successfully',
+    context: 'createExam',
+  })
+}
+
+export async function deleteExam(examId: string) {
+  return apiDelete<{ message: string }>(`/api/academic/exams?id=${examId}`, {
+    showSuccessToast: true,
+    successMessage: 'Exam deleted successfully',
+    context: 'deleteExam',
+  })
+}
+
+export async function getBuses(params?: Record<string, string | number>) {
+  const query = params ? `?${new URLSearchParams(params as Record<string, string>).toString()}` : ''
+  return apiGet<{ buses: any[]; pagination?: any }>(`/api/transport/buses${query}`, { context: 'getBuses' })
+}
+
+export async function getRoutes(params?: Record<string, string | number>) {
+  const query = params ? `?${new URLSearchParams(params as Record<string, string>).toString()}` : ''
+  return apiGet<{ routes: any[]; pagination?: any }>(`/api/transport/routes${query}`, { context: 'getRoutes' })
+}
+
+export async function createFeeCollection(payload: unknown) {
+  return apiPost<{ feeCollection: any; message: string }>('/api/financial/fee-collection', payload, {
+    showSuccessToast: true,
+    successMessage: 'Fee collection recorded successfully',
+    context: 'createFeeCollection',
+  })
+}
+
