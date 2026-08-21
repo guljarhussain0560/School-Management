@@ -47,10 +47,20 @@ vi.mock('sonner', () => ({
   }
 }))
 
-// Mock global fetch if not defined
-if (!global.fetch) {
-  global.fetch = vi.fn()
-}
+import { handleMockRequest } from './test/setup/mock-handlers'
+
+// Standard isolated global fetch mock
+global.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+  const data = handleMockRequest(url, init)
+  return Promise.resolve({
+    ok: true,
+    status: 200,
+    headers: new Headers({ 'content-type': 'application/json' }),
+    json: async () => data,
+    text: async () => JSON.stringify(data),
+  })
+})
+
 
 // Mock ResizeObserver
 global.ResizeObserver = vi.fn().mockImplementation(() => ({

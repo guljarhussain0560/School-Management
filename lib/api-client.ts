@@ -59,9 +59,15 @@ export async function apiRequest<T = unknown>(
       ...restOptions,
     })
 
-    const contentType = response.headers.get('content-type')
-    const isJson = contentType && contentType.includes('application/json')
-    const data = isJson ? await response.json() : await response.text()
+    let isJson = true
+    if (response.headers && typeof response.headers.get === 'function') {
+      const contentType = response.headers.get('content-type')
+      if (contentType && !contentType.includes('application/json')) {
+        isJson = false
+      }
+    }
+    const data = isJson && typeof response.json === 'function' ? await response.json() : typeof response.text === 'function' ? await response.text() : {}
+
 
     if (!response.ok) {
       const errorMessage =
