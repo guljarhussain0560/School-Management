@@ -6,7 +6,7 @@ describe('Financial Validation Schemas', () => {
     const valid = {
       studentId: 'STU-001',
       amount: '500.00',
-      paymentMode: 'ONLINE' as const,
+      paymentMode: 'CASH' as const,
       notes: 'Term 1 tuition',
     }
     const result = collectFeeSchema.safeParse(valid)

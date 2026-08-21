@@ -3,18 +3,31 @@ import { z } from 'zod'
 export const collectFeeSchema = z.object({
   studentId: z.string().min(1, 'Student ID is required'),
   amount: z.coerce.number().positive('Fee amount must be greater than zero'),
-  paymentMode: z.enum(['CASH', 'ONLINE', 'CHEQUE', 'BANK_TRANSFER', 'CARD', 'UPI']),
+  paymentMode: z.enum(['CASH', 'UPI', 'BANK_TRANSFER']),
   notes: z.string().optional().nullable(),
 })
 
 export const createFeeStructureSchema = z.object({
-  grade: z.string().min(1, 'Grade is required'),
-  tuitionFee: z.coerce.number().min(0, 'Tuition fee cannot be negative'),
-  admissionFee: z.coerce.number().min(0).default(0),
-  transportFee: z.coerce.number().min(0).default(0),
-  libraryFee: z.coerce.number().min(0).default(0),
-  activityFee: z.coerce.number().min(0).default(0),
-  academicYear: z.string().min(1, 'Academic year is required'),
+  name: z.string().min(1, 'Fee structure name is required'),
+  description: z.string().optional().nullable(),
+  amount: z.coerce.number().positive('Amount must be greater than zero'),
+  frequency: z.enum(['MONTHLY', 'QUARTERLY', 'SEMESTERLY', 'ANNUAL', 'ONE_TIME']).default('MONTHLY'),
+  category: z.enum([
+    'TUITION',
+    'TRANSPORT',
+    'LIBRARY',
+    'LABORATORY',
+    'SPORTS',
+    'EXAMINATION',
+    'DEVELOPMENT',
+    'MISCELLANEOUS',
+  ]).default('TUITION'),
+  isMandatory: z.boolean().default(true),
+  isActive: z.boolean().default(true),
+  applicableFrom: z.string().optional().nullable(),
+  applicableTo: z.string().optional().nullable(),
+  classId: z.string().optional().nullable(),
+  batchId: z.string().optional().nullable(),
 })
 
 export const createExpenseSchema = z.object({
@@ -27,12 +40,17 @@ export const createExpenseSchema = z.object({
 
 export const createPayrollSchema = z.object({
   employeeId: z.string().min(1, 'Employee ID is required'),
+  employeeName: z.string().optional().nullable(),
+  department: z.string().optional().nullable(),
+  position: z.string().optional().nullable(),
   basicSalary: z.coerce.number().positive('Basic salary must be positive'),
   allowances: z.coerce.number().min(0).default(0),
   deductions: z.coerce.number().min(0).default(0),
-  month: z.string().min(1, 'Month is required'),
-  year: z.string().min(1, 'Year is required'),
-  status: z.enum(['Pending', 'Processed', 'Paid']).default('Pending'),
+  netSalary: z.coerce.number().optional().nullable(),
+  amount: z.coerce.number().optional().nullable(),
+  month: z.union([z.string(), z.number()]),
+  year: z.union([z.string(), z.number()]),
+  status: z.string().optional().default('Pending'),
 })
 
 export type CollectFeeInput = z.infer<typeof collectFeeSchema>
