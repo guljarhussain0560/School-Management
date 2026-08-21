@@ -12,6 +12,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Search, Edit, Trash2, Users, GraduationCap, Truck } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { logger } from '@/lib/logger'
+
 interface User {
   id: string
   name: string
@@ -64,11 +66,14 @@ export default function UserManagement({ onUserUpdate }: UserManagementProps) {
       const response = await fetch('/api/users')
       if (response.ok) {
         const data = await response.json()
-        setUsers(data.users)
+        setUsers(data.users || [])
       } else {
+        const errorData = await response.json().catch(() => ({}))
+        logger.error('Failed to fetch users:', { status: response.status, error: errorData })
         toast.error('Failed to fetch users')
       }
     } catch (error) {
+      logger.error('Exception fetching users:', error)
       toast.error('Error fetching users')
     } finally {
       setLoading(false)
@@ -105,9 +110,11 @@ export default function UserManagement({ onUserUpdate }: UserManagementProps) {
         onUserUpdate?.()
       } else {
         const error = await response.json()
+        logger.error('Failed to create user:', { error, formData })
         toast.error(error.error || 'Failed to create user')
       }
     } catch (error) {
+      logger.error('Exception creating user:', error)
       toast.error('Error creating user')
     }
   }
@@ -133,9 +140,11 @@ export default function UserManagement({ onUserUpdate }: UserManagementProps) {
         onUserUpdate?.()
       } else {
         const error = await response.json()
+        logger.error('Failed to update user:', { error, userId: editingUser.id })
         toast.error(error.error || 'Failed to update user')
       }
     } catch (error) {
+      logger.error('Exception updating user:', error)
       toast.error('Error updating user')
     }
   }
@@ -153,9 +162,11 @@ export default function UserManagement({ onUserUpdate }: UserManagementProps) {
         onUserUpdate?.()
       } else {
         const error = await response.json()
+        logger.error('Failed to delete user:', { error, userId })
         toast.error(error.error || 'Failed to delete user')
       }
     } catch (error) {
+      logger.error('Exception deleting user:', error)
       toast.error('Error deleting user')
     }
   }
