@@ -14,6 +14,7 @@ import {
   CheckCircle, Clock, AlertCircle, Plus, FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 interface Student {
   id: string;
@@ -96,9 +97,12 @@ const FinancialDataForm = () => {
         toast.success('Payment recorded successfully');
         setFeeForm({ studentId: '', paymentMode: '', amount: '' });
       } else {
+        const errorData = await response.json().catch(() => ({}));
+        logger.error('Failed to record fee payment:', { status: response.status, error: errorData });
         toast.error('Failed to record payment');
       }
     } catch (error) {
+      logger.error('Exception recording fee payment:', error);
       toast.error('Error recording payment');
     } finally {
       setLoading(false);

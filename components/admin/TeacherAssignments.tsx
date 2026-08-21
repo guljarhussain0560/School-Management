@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
-import { Plus, Search, Edit, Trash2, Users, BookOpen } from 'lucide-react'
+import { Plus, Search, Trash2, BookOpen } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface TeacherAssignment {
@@ -61,15 +61,8 @@ export default function TeacherAssignments() {
     subjectId: '',
     classId: ''
   })
-  const [subjects, setSubjects] = useState([])
-  const [classes, setClasses] = useState([])
-
-  useEffect(() => {
-    fetchAssignments()
-    fetchTeachers()
-    fetchSubjects()
-    fetchClasses()
-  }, [])
+  const [subjects, setSubjects] = useState<any[]>([])
+  const [classes, setClasses] = useState<any[]>([])
 
   const fetchAssignments = async () => {
     try {
@@ -79,6 +72,8 @@ export default function TeacherAssignments() {
         const data = await response.json()
         setAssignments(data.assignments || [])
       } else {
+        const errorData = await response.json().catch(() => ({}))
+        logger.error('Failed to fetch teacher assignments:', { status: response.status, error: errorData })
         toast.error('Failed to fetch teacher assignments')
       }
     } catch (error) {
@@ -95,6 +90,9 @@ export default function TeacherAssignments() {
       if (response.ok) {
         const data = await response.json()
         setTeachers(data.users || [])
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        logger.error('Failed to fetch teachers:', { status: response.status, error: errorData })
       }
     } catch (error) {
       logger.error('Error fetching teachers:', error)
@@ -107,6 +105,9 @@ export default function TeacherAssignments() {
       if (response.ok) {
         const data = await response.json()
         setSubjects(data.subjects || [])
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        logger.error('Failed to fetch subjects:', { status: response.status, error: errorData })
       }
     } catch (error) {
       logger.error('Error fetching subjects:', error)
@@ -119,6 +120,9 @@ export default function TeacherAssignments() {
       if (response.ok) {
         const data = await response.json()
         setClasses(data.classes || [])
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        logger.error('Failed to fetch classes:', { status: response.status, error: errorData })
       }
     } catch (error) {
       logger.error('Error fetching classes:', error)
@@ -143,6 +147,7 @@ export default function TeacherAssignments() {
         fetchAssignments()
       } else {
         const error = await response.json()
+        logger.error('Failed to create teacher assignment:', { error, formData })
         toast.error(error.error || 'Failed to create teacher assignment')
       }
     } catch (error) {
@@ -163,7 +168,9 @@ export default function TeacherAssignments() {
         toast.success('Teacher assignment deleted successfully')
         fetchAssignments()
       } else {
-        toast.error('Failed to delete teacher assignment')
+        const error = await response.json()
+        logger.error('Failed to delete teacher assignment:', { error, assignmentId })
+        toast.error(error.error || 'Failed to delete teacher assignment')
       }
     } catch (error) {
       logger.error('Error deleting teacher assignment:', error)
@@ -171,12 +178,19 @@ export default function TeacherAssignments() {
     }
   }
 
+  useEffect(() => {
+    fetchAssignments()
+    fetchTeachers()
+    fetchSubjects()
+    fetchClasses()
+  }, [])
+
   const filteredAssignments = assignments.filter(assignment => {
-    const matchesSearch = assignment.teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         assignment.subject.subjectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = assignment.teacher?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         assignment.subject?.subjectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          ((assignment.class as any)?.className || (assignment.class as any)?.classCode || "N/A").toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesSubject = subjectFilter === 'all' || assignment.subject.id === subjectFilter
-    const matchesClass = classFilter === 'all' || assignment.class.id === classFilter
+    const matchesSubject = subjectFilter === 'all' || assignment.subject?.id === subjectFilter
+    const matchesClass = classFilter === 'all' || assignment.class?.id === classFilter
 
     return matchesSearch && matchesSubject && matchesClass
   })
@@ -218,66 +232,47 @@ export default function TeacherAssignments() {
               </DialogHeader>
               <form onSubmit={handleCreateAssignment} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Teacher</label>
-                  <Select
-                    value={formData.teacherId}
-                    onValueChange={(value) => setFormData({ ...formData, teacherId: value })}
-                  >
+                  <label className="text-sm font-medium">Teacher</label>
+                  <Select value={formData.teacherId} onValueChange={(val) => setFormData(prev => ({ ...prev, teacherId: val }))}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select teacher" />
+                      <SelectValue placeholder="Select Teacher" />
                     </SelectTrigger>
                     <SelectContent>
-                      {teachers.map((teacher) => (
-                        <SelectItem key={teacher.id} value={teacher.id}>
-                          {teacher.name} ({teacher.email})
-                        </SelectItem>
+                      {teachers.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Subject</label>
-                  <Select
-                    value={formData.subjectId}
-                    onValueChange={(value) => setFormData({ ...formData, subjectId: value })}
-                  >
+                  <label className="text-sm font-medium">Subject</label>
+                  <Select value={formData.subjectId} onValueChange={(val) => setFormData(prev => ({ ...prev, subjectId: val }))}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select subject" />
+                      <SelectValue placeholder="Select Subject" />
                     </SelectTrigger>
                     <SelectContent>
-                      {subjects.map((subject: any) => (
-                        <SelectItem key={subject.id} value={subject.id}>
-                          {subject.subjectName}
-                        </SelectItem>
+                      {subjects.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.subjectName || s.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Class</label>
-                  <Select
-                    value={formData.classId}
-                    onValueChange={(value) => setFormData({ ...formData, classId: value })}
-                  >
+                  <label className="text-sm font-medium">Class</label>
+                  <Select value={formData.classId} onValueChange={(val) => setFormData(prev => ({ ...prev, classId: val }))}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select class" />
+                      <SelectValue placeholder="Select Class" />
                     </SelectTrigger>
                     <SelectContent>
-                      {classes.map((classItem: any) => (
-                        <SelectItem key={classItem.id} value={classItem.id}>
-                          {(classItem?.classCode || classItem?.sectionName || "N/A")}
-                        </SelectItem>
+                      {classes.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.className || c.name || c.classCode}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={loading}>
-                    Create Assignment
-                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
+                  <Button type="submit" disabled={!formData.teacherId || !formData.subjectId || !formData.classId}>Assign</Button>
                 </div>
               </form>
             </DialogContent>
@@ -285,111 +280,90 @@ export default function TeacherAssignments() {
         </div>
       </CardHeader>
       <CardContent>
-        {/* Filters */}
-        <div className="flex gap-4 mb-6">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search assignments..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search assignments..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
           </div>
           <Select value={subjectFilter} onValueChange={setSubjectFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Filter by subject" />
+            <SelectTrigger className="w-full md:w-[180px]">
+              <SelectValue placeholder="All Subjects" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Subjects</SelectItem>
-              {subjects.map((subject: any) => (
-                <SelectItem key={subject.id} value={subject.id}>
-                  {subject.subjectName}
-                </SelectItem>
+              {subjects.map((s) => (
+                <SelectItem key={s.id} value={s.id}>{s.subjectName || s.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Select value={classFilter} onValueChange={setClassFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Filter by class" />
+            <SelectTrigger className="w-full md:w-[180px]">
+              <SelectValue placeholder="All Classes" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Classes</SelectItem>
-              {classes.map((classItem: any) => (
-                <SelectItem key={classItem.id} value={classItem.id}>
-                  {(classItem?.classCode || classItem?.sectionName || "N/A")}
-                </SelectItem>
+              {classes.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.className || c.name || c.classCode}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
-        {/* Assignments Table */}
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Teacher</TableHead>
+              <TableHead>Subject</TableHead>
+              <TableHead>Class</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredAssignments.length === 0 ? (
               <TableRow>
-                <TableHead>Teacher</TableHead>
-                <TableHead>Subject</TableHead>
-                <TableHead>Class</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableCell colSpan={4} className="text-center py-6 text-gray-500">
+                  No assignments found.
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAssignments.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    No teacher assignments found
+            ) : (
+              filteredAssignments.map((a) => (
+                <TableRow key={a.id}>
+                  <TableCell className="font-medium">{a.teacher?.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{a.subject?.subjectName}</Badge>
+                  </TableCell>
+                  <TableCell>{(a.class as any)?.className || (a.class as any)?.classCode || 'N/A'}</TableCell>
+                  <TableCell className="text-right">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Assignment</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to remove this teacher assignment?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteAssignment(a.id)}>Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </TableCell>
                 </TableRow>
-              ) : (
-                filteredAssignments.map((assignment) => (
-                  <TableRow key={assignment.id}>
-                    <TableCell className="font-medium">
-                      {assignment.teacher.name}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{assignment.subject.subjectName}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{((assignment.class as any)?.className || (assignment.class as any)?.classCode || "N/A")}</Badge>
-                    </TableCell>
-                    <TableCell>{assignment.teacher.email}</TableCell>
-                    <TableCell className="text-right">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Teacher Assignment</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to remove {assignment.teacher.name} from teaching {assignment.subject.subjectName} in {((assignment.class as any)?.className || (assignment.class as any)?.classCode || "N/A")}? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteAssignment(assignment.id)}
-                              className="bg-red-600 hover:bg-red-700"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </CardContent>
     </Card>
   )
