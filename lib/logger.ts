@@ -27,6 +27,14 @@ export interface LogEntry {
   }
 }
 
+export type ErrorTrackerHandler = (error: Error | unknown, context?: LogContext) => void
+
+let externalErrorTracker: ErrorTrackerHandler | null = null
+
+export function registerErrorTracker(handler: ErrorTrackerHandler) {
+  externalErrorTracker = handler
+}
+
 class StructuredLogger {
   private isProduction = process.env.NODE_ENV === 'production'
 
@@ -110,11 +118,30 @@ class StructuredLogger {
 
   error(message: string, error?: Error | unknown, context?: LogContext) {
     this.output(this.formatEntry('error', message, context, error))
+    if (error && (process.env.ENABLE_ERROR_TRACKING === 'true' || process.env.SENTRY_DSN)) {
+      try {
+        if (externalErrorTracker) {
+          externalErrorTracker(error, context)
+        }
+      } catch {
+        // Prevent telemetry exception from bubbling
+      }
+    }
   }
 
   fatal(message: string, error?: Error | unknown, context?: LogContext) {
     this.output(this.formatEntry('fatal', message, context, error))
+    if (error && (process.env.ENABLE_ERROR_TRACKING === 'true' || process.env.SENTRY_DSN)) {
+      try {
+        if (externalErrorTracker) {
+          externalErrorTracker(error, context)
+        }
+      } catch {
+        // Prevent telemetry exception from bubbling
+      }
+    }
   }
 }
 
 export const logger = new StructuredLogger()
+
