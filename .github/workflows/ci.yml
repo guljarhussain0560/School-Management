@@ -135,3 +135,42 @@ jobs:
           NEXTAUTH_SECRET: 'ci-build-test-secret-key-32chars-minimum'
           NEXTAUTH_URL: 'http://localhost:3000'
           DATABASE_URL: 'postgresql://mock:mock@localhost:5432/mock_school_db'
+
+  # ============================================================================
+  # End-to-End Fresh-Clone Container Bootstrap Verification
+  # ============================================================================
+  e2e-bootstrap:
+    name: E2E Bootstrap & Health Verification
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure Environment
+        run: cp .env.example .env
+
+      - name: Start Application Stack via Docker Compose
+        run: docker compose up --build -d
+
+      - name: Verify Health Endpoint Response
+        run: |
+          echo "Waiting for services to become healthy..."
+          for i in {1..30}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/health || true)
+            if [ "$STATUS" = "200" ]; then
+              echo "Health check passed with HTTP 200!"
+              curl -s http://localhost:3000/api/health | jq .
+              exit 0
+            fi
+            echo "Attempt $i: Received HTTP $STATUS, retrying in 3s..."
+            sleep 3
+          done
+          echo "Health check timed out."
+          docker compose logs app
+          exit 1
+
+      - name: Teardown Stack
+        if: always()
+        run: docker compose down -v
+
