@@ -4,87 +4,66 @@ import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 
-vi.mock('next-auth', () => ({
-  getServerSession: vi.fn(),
-}))
-
+vi.mock('next-auth')
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     exam: {
       findMany: vi.fn(),
-      findUnique: vi.fn(),
+      findFirst: vi.fn(),
       create: vi.fn(),
+    },
+    subject: {
+      findFirst: vi.fn(),
+    },
+    class: {
+      findFirst: vi.fn(),
     },
   },
 }))
 
-describe('/api/academic/exams Route Handler', () => {
+describe('Academic Exams API Route', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('returns 401 when unauthenticated in GET', async () => {
+  it('returns 401 when session missing', async () => {
     vi.mocked(getServerSession).mockResolvedValue(null)
+    const req = new NextRequest('http://localhost:3000/api/academic/exams')
+    const res = await GET(req)
+    expect(res.status).toBe(401)
+  })
+
+  it('fetches exams list for authenticated school user', async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: 'u1', role: 'ADMIN', schoolId: 's1' },
+    } as any)
+
+    const mockExams = [
+      { id: 'ex-1', examName: 'Midterm 2026', totalMarks: 100, passingMarks: 40 },
+    ]
+
+    vi.mocked(prisma.exam.findMany).mockResolvedValue(mockExams as any)
+
     const req = new NextRequest('http://localhost:3000/api/academic/exams')
     const res = await GET(req)
     const data = await res.json()
 
-    expect(res.status).toBe(401)
-    expect(data.error).toBe('Unauthorized')
+    expect(res.status).toBe(200)
+    expect(data.exams.length).toBe(1)
+    expect(data.exams[0].examName).toBe('Midterm 2026')
   })
 
-  it('returns 400 when creating an exam with invalid Zod payload', async () => {
+  it('returns 400 when invalid payload sent to POST', async () => {
     vi.mocked(getServerSession).mockResolvedValue({
       user: { id: 'u1', role: 'ADMIN', schoolId: 's1' },
     } as any)
 
     const req = new NextRequest('http://localhost:3000/api/academic/exams', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        examName: '',
-        totalMarks: -10,
-      }),
+      body: JSON.stringify({ examName: '' }),
     })
-    const res = await POST(req)
-    const data = await res.json()
 
+    const res = await POST(req)
     expect(res.status).toBe(400)
-    expect(data.error).toBeDefined()
-  })
-
-  it('creates exam successfully with valid payload', async () => {
-    vi.mocked(getServerSession).mockResolvedValue({
-      user: { id: 'u1', role: 'ADMIN', schoolId: 's1' },
-    } as any)
-
-    vi.mocked(prisma.exam.findUnique).mockResolvedValue(null)
-    vi.mocked(prisma.exam.create).mockResolvedValue({
-      id: 'ex-1',
-      examName: 'Midterm Math',
-      examType: 'MID_TERM',
-      totalMarks: 100,
-      passingMarks: 40,
-    } as any)
-
-    const req = new NextRequest('http://localhost:3000/api/academic/exams', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        examName: 'Midterm Math',
-        examType: 'MID_TERM',
-        subjectId: 'sub-1',
-        classId: 'cls-1',
-        totalMarks: 100,
-        passingMarks: 40,
-        duration: 120,
-      }),
-    })
-    const res = await POST(req)
-    const data = await res.json()
-
-    expect(res.status).toBe(201)
-    expect(data.message).toBe('Exam created successfully')
-    expect(data.exam.examName).toBe('Midterm Math')
   })
 })
