@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { collectFeeSchema } from '@/lib/validation'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,15 +23,11 @@ export async function GET(request: NextRequest) {
     const field = searchParams.get('field') || 'studentId'
     const paymentMode = searchParams.get('paymentMode') || 'all'
 
-    // Calculate pagination
     const skip = (page - 1) * limit
-
-    // Build where clause
     const where: any = {
       schoolId: session.user.schoolId || ""
     }
 
-    // Add search filter
     if (search) {
       if (field === 'studentId') {
         where.student = {
@@ -54,22 +52,27 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Add payment mode filter
     if (paymentMode && paymentMode !== 'all') {
       where.paymentMode = paymentMode
     }
 
-    // Get total count for pagination
     const totalCount = await prisma.feeCollection.count({ where })
 
-    // Get fee collections with pagination
     const feeCollections = await prisma.feeCollection.findMany({
       where,
       include: {
         student: {
-          select: { id: true, studentId: true, name: true, rollNumber: true, admissionNumber: true, class: {
+          select: {
+            id: true,
+            studentId: true,
+            name: true,
+            rollNumber: true,
+            admissionNumber: true,
+            class: {
               select: {
-                classCode: true, sectionName: true }
+                classCode: true,
+                sectionName: true
+              }
             }
           }
         },
@@ -82,40 +85,36 @@ export async function GET(request: NextRequest) {
       take: limit
     })
 
-    // Calculate summary statistics
     const [totalAmount, cashTotal, upiTotal, bankTransferTotal] = await Promise.all([
       prisma.feeCollection.aggregate({
         where: { schoolId: session.user.schoolId || "" },
         _sum: { amount: true }
       }),
       prisma.feeCollection.aggregate({
-        where: { schoolId: session.user.schoolId || "" || "", paymentMode: 'CASH' },
+        where: { schoolId: session.user.schoolId || "", paymentMode: 'CASH' },
         _sum: { amount: true }
       }),
       prisma.feeCollection.aggregate({
-        where: { schoolId: session.user.schoolId || "" || "", paymentMode: 'UPI' },
+        where: { schoolId: session.user.schoolId || "", paymentMode: 'UPI' },
         _sum: { amount: true }
       }),
       prisma.feeCollection.aggregate({
-        where: { schoolId: session.user.schoolId || "" || "", paymentMode: 'BANK_TRANSFER' },
+        where: { schoolId: session.user.schoolId || "", paymentMode: 'BANK_TRANSFER' },
         _sum: { amount: true }
       })
     ])
 
-    const summary = {
-      totalAmount: Number(totalAmount?._sum.amount || 0),
-      totalRecords: totalCount,
-      cashTotal: Number(cashTotal._sum.amount || 0),
-      upiTotal: Number(upiTotal._sum.amount || 0),
-      bankTransferTotal: Number(bankTransferTotal._sum.amount || 0)
-    }
-
-    // Calculate pagination info
     const totalPages = Math.ceil(totalCount / limit)
 
     return NextResponse.json({
       feeCollections,
-      summary,
+      summary: {
+        totalAmount: totalAmount._sum.amount || 0,
+        cashTotal: cashTotal._sum.amount || 0,
+        upiTotal: upiTotal._sum.amount || 0,
+        bankTransferTotal: bankTransferTotal._sum.amount || 0,
+        totalTransactions: totalCount
+      },
       pagination: {
         currentPage: page,
         totalPages,
@@ -127,7 +126,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Get fee collections error:', error)
+    logger.error('Get fee collections error', error as Error, { path: '/api/financial/fee-collection' })
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -147,20 +146,21 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { studentId, amount, paymentMode, receiptUrl, notes } = body
+    const validation = collectFeeSchema.safeParse({
+      ...body,
+      paymentMode: body.paymentMode?.toUpperCase()?.replace(/\s+/g, '_')
+    })
 
-    // Normalize payment mode to uppercase and replace spaces with underscores
-    const normalizedPaymentMode = paymentMode?.toUpperCase().replace(/\s+/g, '_')
-
-    // Validation
-    if (!studentId || !amount || !paymentMode) {
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Student ID, amount, and payment mode are required' },
+        { error: validation.error.errors[0]?.message || 'Invalid fee collection data', details: validation.error.errors },
         { status: 400 }
       )
     }
 
-    // Check if student belongs to same school (search by studentId, id, rollNumber, and admissionNumber)
+    const { studentId, amount, paymentMode, notes } = validation.data
+    const receiptUrl = body.receiptUrl
+
     const student = await prisma.student.findFirst({
       where: {
         OR: [
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
           { rollNumber: studentId },
           { admissionNumber: studentId }
         ],
-        schoolId: session.user.schoolId || ""!
+        schoolId: session.user.schoolId || ""
       },
       include: {
         class: {
@@ -185,49 +185,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate fee ID
-    const feeId = `FEE${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
+    const feeId = `FEE${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`
 
-    // Create fee collection record
     const feeCollection = await prisma.feeCollection.create({
       data: {
         feeId,
-        studentId: student.id, // Use the actual student ID from database
-        amount: parseFloat(amount),
-        paymentMode: normalizedPaymentMode,
-        receiptUrl,
-        notes,
+        studentId: student.id,
+        amount: typeof amount === 'number' ? amount : parseFloat(amount),
+        paymentMode: paymentMode as any,
+        receiptUrl: receiptUrl || null,
+        notes: notes || null,
         collectedBy: session.user.id,
-        schoolId: session.user.schoolId || ""!,
+        schoolId: session.user.schoolId || "",
       }
     })
 
-    // Generate receipt number
-    const receiptNumber = `REC-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
-
-    // Prepare receipt data
-    const receiptData = {
-      receiptNumber,
-      studentName: student.name,
-      studentId: student.studentId,
-      admissionNumber: student.admissionNumber,
-      grade: student.class?.classCode || 'Unknown',
-      amount: parseFloat(amount),
-      paymentMode: normalizedPaymentMode,
-      notes,
-      date: new Date().toLocaleDateString('en-IN'),
-      collectedBy: session.user.name || 'Admin',
-      schoolName: 'Sample School' // You might want to get this from the school record
-    };
+    const receiptNumber = `REC-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`
 
     return NextResponse.json({
-      message: 'Fee collection recorded successfully',
+      message: 'Fee collected successfully',
       feeCollection,
-      receiptData
+      receiptNumber
     }, { status: 201 })
 
   } catch (error) {
-    console.error('Record fee collection error:', error)
+    logger.error('Create fee collection error', error as Error, { path: '/api/financial/fee-collection' })
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { createFeeStructureSchema } from '@/lib/validation'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -66,7 +68,7 @@ export async function GET(request: NextRequest) {
       feeStructures
     })
   } catch (error) {
-    console.error('Error fetching fee structures:', error)
+    logger.error('Error fetching fee structures', error as Error, { path: '/api/financial/fee-structures' })
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -94,6 +96,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
+    const validation = createFeeStructureSchema.safeParse(body)
+
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: validation.error.errors[0]?.message || 'Invalid fee structure data', details: validation.error.errors },
+        { status: 400 }
+      )
+    }
+
     const { 
       name, 
       description, 
@@ -106,15 +117,7 @@ export async function POST(request: NextRequest) {
       applicableTo,
       classId, 
       batchId 
-    } = body
-
-    // Validate required fields
-    if (!name || !amount || !frequency || !category) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
-    }
+    } = validation.data
 
     // Generate fee code
     const feeCount = await prisma.feeStructure.count({
@@ -142,10 +145,10 @@ export async function POST(request: NextRequest) {
       data: {
         feeCode,
         name,
-        description,
-        amount: parseFloat(amount),
-        frequency,
-        category,
+        description: description || null,
+        amount: typeof amount === 'number' ? amount : parseFloat(amount),
+        frequency: frequency as any,
+        category: category as any,
         isMandatory: isMandatory ?? true,
         isActive: isActive ?? true,
         applicableFrom: applicableFrom ? new Date(applicableFrom) : new Date(),
@@ -171,9 +174,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       feeStructure,
       message: 'Fee structure created successfully'
-    })
+    }, { status: 201 })
   } catch (error) {
-    console.error('Error creating fee structure:', error)
+    logger.error('Error creating fee structure', error as Error, { path: '/api/financial/fee-structures' })
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -192,7 +195,6 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // Only admin can update fee structures
     if (session.user.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Forbidden' },
@@ -201,20 +203,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { 
-      id,
-      name, 
-      description, 
-      amount, 
-      frequency, 
-      category, 
-      isMandatory, 
-      isActive,
-      applicableFrom,
-      applicableTo,
-      classId, 
-      batchId 
-    } = body
+    const { id, ...dataToValidate } = body
 
     if (!id) {
       return NextResponse.json(
@@ -223,7 +212,14 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // Check if fee structure exists and belongs to school
+    const validation = createFeeStructureSchema.partial().safeParse(dataToValidate)
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: validation.error.errors[0]?.message || 'Invalid update data' },
+        { status: 400 }
+      )
+    }
+
     const existingFee = await prisma.feeStructure.findFirst({
       where: {
         id,
@@ -238,31 +234,21 @@ export async function PUT(request: NextRequest) {
       )
     }
 
+    const valData = validation.data
     const updatedFeeStructure = await prisma.feeStructure.update({
       where: { id },
       data: {
-        name,
-        description,
-        amount: parseFloat(amount),
-        frequency,
-        category,
-        isMandatory,
-        isActive,
-        applicableFrom: applicableFrom ? new Date(applicableFrom) : existingFee.applicableFrom,
-        applicableTo: applicableTo ? new Date(applicableTo) : existingFee.applicableTo,
-        classId: classId || null,
-        batchId: batchId || null
-      },
-      include: {
-        class: {
-          select: { id: true, classCode: true, sectionName: true }
-        },
-        batch: {
-          select: { id: true, batchName: true, batchCode: true }
-        },
-        creator: {
-          select: { id: true, name: true, email: true }
-        }
+        ...(valData.name && { name: valData.name }),
+        ...(valData.description !== undefined && { description: valData.description || null }),
+        ...(valData.amount !== undefined && { amount: typeof valData.amount === 'number' ? valData.amount : parseFloat(valData.amount) }),
+        ...(valData.frequency && { frequency: valData.frequency as any }),
+        ...(valData.category && { category: valData.category as any }),
+        ...(valData.isMandatory !== undefined && { isMandatory: valData.isMandatory }),
+        ...(valData.isActive !== undefined && { isActive: valData.isActive }),
+        ...(valData.applicableFrom && { applicableFrom: new Date(valData.applicableFrom) }),
+        ...(valData.applicableTo !== undefined && { applicableTo: valData.applicableTo ? new Date(valData.applicableTo) : null }),
+        ...(valData.classId !== undefined && { classId: valData.classId || null }),
+        ...(valData.batchId !== undefined && { batchId: valData.batchId || null }),
       }
     })
 
@@ -271,7 +257,7 @@ export async function PUT(request: NextRequest) {
       message: 'Fee structure updated successfully'
     })
   } catch (error) {
-    console.error('Error updating fee structure:', error)
+    logger.error('Error updating fee structure', error as Error, { path: '/api/financial/fee-structures' })
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -290,7 +276,6 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Only admin can delete fee structures
     if (session.user.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Forbidden' },
@@ -299,54 +284,38 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const feeStructureId = searchParams.get('id')
+    const id = searchParams.get('id')
 
-    if (!feeStructureId) {
+    if (!id) {
       return NextResponse.json(
         { error: 'Fee structure ID is required' },
         { status: 400 }
       )
     }
 
-    // Check if fee structure exists and belongs to school
-    const feeStructure = await prisma.feeStructure.findFirst({
+    const existingFee = await prisma.feeStructure.findFirst({
       where: {
-        id: feeStructureId,
+        id,
         schoolId: session.user.schoolId!
-      },
-      include: {
-        _count: {
-          select: { collections: true }
-        }
       }
     })
 
-    if (!feeStructure) {
+    if (!existingFee) {
       return NextResponse.json(
         { error: 'Fee structure not found' },
         { status: 404 }
       )
     }
 
-    // Check if there are any fee collections for this structure
-    if (feeStructure._count.collections > 0) {
-      return NextResponse.json(
-        { error: 'Cannot delete fee structure with existing collections. Please deactivate it instead.' },
-        { status: 400 }
-      )
-    }
-
     await prisma.feeStructure.delete({
-      where: {
-        id: feeStructureId
-      }
+      where: { id }
     })
 
     return NextResponse.json({
       message: 'Fee structure deleted successfully'
     })
   } catch (error) {
-    console.error('Error deleting fee structure:', error)
+    logger.error('Error deleting fee structure', error as Error, { path: '/api/financial/fee-structures' })
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

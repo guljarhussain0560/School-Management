@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { createPayrollSchema } from '@/lib/validation'
+import { logger } from '@/lib/logger'
 import * as XLSX from 'xlsx'
 
 export async function POST(request: NextRequest) {
@@ -19,15 +21,17 @@ export async function POST(request: NextRequest) {
     // Handle single payroll entry (JSON)
     if (contentType?.includes('application/json')) {
       const body = await request.json()
-      const { employeeId, employeeName, department, position, basicSalary, allowances, deductions, netSalary, month, year, status } = body
+      const validation = createPayrollSchema.safeParse(body)
 
-      // Validation
-      if (!employeeId || !employeeName || !department || !basicSalary || !netSalary || !month || !year) {
+      if (!validation.success) {
         return NextResponse.json(
-          { error: 'Employee ID, name, department, basic salary, net salary, month, and year are required' },
+          { error: validation.error.errors[0]?.message || 'Invalid payroll data', details: validation.error.errors },
           { status: 400 }
         )
       }
+
+      const { employeeId, employeeName, department, position, basicSalary, allowances, deductions, netSalary, amount, month, year, status } = validation.data
+      const effectiveNetSalary = netSalary || amount || basicSalary + (allowances || 0) - (deductions || 0)
 
       // Find the employee by employeeId to get the database id
       const employee = await prisma.employee.findFirst({
@@ -61,22 +65,23 @@ export async function POST(request: NextRequest) {
       }
 
       // Generate payroll ID
-      const payrollId = `${department.substring(0, 3).toUpperCase()}${year}${String(month).padStart(2, '0')}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
+      const deptCode = (department || employee.department || 'GEN').substring(0, 3).toUpperCase()
+      const payrollId = `${deptCode}${year}${String(month).padStart(2, '0')}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
 
       // Create payroll record using the employee's database id
       const payroll = await prisma.payroll.create({
         data: {
           payrollId,
-          employeeId: employee.id, // Use the database id, not the employeeId string
-          employeeName,
-          department,
-          position,
-          basicSalary: parseFloat(basicSalary) || 0,
-          allowances: parseFloat(allowances) || 0,
-          deductions: parseFloat(deductions) || 0,
-          amount: parseFloat(netSalary),
-          month: parseInt(month),
-          year: parseInt(year),
+          employeeId: employee.id,
+          employeeName: employeeName || employee.name,
+          department: department || employee.department,
+          position: position || employee.position,
+          basicSalary: typeof basicSalary === 'number' ? basicSalary : parseFloat(basicSalary as any) || 0,
+          allowances: typeof allowances === 'number' ? allowances : parseFloat(allowances as any) || 0,
+          deductions: typeof deductions === 'number' ? deductions : parseFloat(deductions as any) || 0,
+          amount: typeof effectiveNetSalary === 'number' ? effectiveNetSalary : parseFloat(effectiveNetSalary as any) || 0,
+          month: typeof month === 'number' ? month : parseInt(month),
+          year: typeof year === 'number' ? year : parseInt(year),
           status: (status?.toUpperCase() as any) || 'PENDING',
           uploadedBy: session.user.id,
           schoolId: session.user.schoolId!
@@ -205,7 +210,7 @@ export async function POST(request: NextRequest) {
         
         payrollRecords.push(payrollData)
       } catch (error) {
-        console.error(`Error processing row ${i + 2}:`, error)
+        logger.error(`Error processing row ${i + 2}:`, error)
         errors.push(`Row ${i + 2}: ${error instanceof Error ? error.message : 'Unknown error'}`)
       }
     }
@@ -220,7 +225,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error) {
-    console.error('Error in payroll upload:', error)
+    logger.error('Error in payroll upload:', error)
     return NextResponse.json(
       { error: 'Failed to process payroll upload' },
       { status: 500 }
@@ -369,7 +374,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Get payroll records error:', error)
+    logger.error('Get payroll records error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
