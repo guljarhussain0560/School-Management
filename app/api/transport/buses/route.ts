@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { IDService } from '@/lib/id-service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,11 +19,10 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const status = searchParams.get('status');
-    const search = searchParams.get('search') || '';
+    const search = searchParams.get('search');
 
     const skip = (page - 1) * limit;
 
-    // Build where clause
     const where: any = {
       schoolId: session.user.schoolId!
     };
@@ -36,8 +34,8 @@ export async function GET(request: NextRequest) {
     if (search) {
       where.OR = [
         { busNumber: { contains: search, mode: 'insensitive' } },
-        { busName: { contains: search, mode: 'insensitive' } },
-        { driverName: { contains: search, mode: 'insensitive' } }
+        { driverName: { contains: search, mode: 'insensitive' } },
+        { driverPhone: { contains: search, mode: 'insensitive' } }
       ];
     }
 
@@ -88,34 +86,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!['ADMIN', 'TRANSPORT'].includes(session.user.role)) {
+      return NextResponse.json(
+        { error: 'Forbidden - Transport or Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
     const {
       busNumber,
-      registrationNumber,
       capacity,
       driverName,
       driverPhone,
       conductorName,
       conductorPhone,
-      routeId,
       status = 'ACTIVE',
-      fuelType = 'DIESEL',
-      yearOfManufacture,
-      insuranceExpiry,
-      fitnessExpiry,
-      lastServiceDate,
-      nextServiceDate,
-      mileage,
-      notes
-    } = await request.json();
+    } = body;
 
-    if (!busNumber || !registrationNumber || !capacity || !driverName || !driverPhone) {
+    if (!busNumber || !driverName || !driverPhone) {
       return NextResponse.json(
-        { error: 'Bus number, registration number, capacity, driver name, and driver phone are required' },
+        { error: 'Bus number, driver name, and driver phone are required' },
         { status: 400 }
       );
     }
 
-    // Check if bus number already exists
     const existingBus = await prisma.bus.findFirst({
       where: {
         busNumber,
@@ -133,7 +128,7 @@ export async function POST(request: NextRequest) {
     const bus = await prisma.bus.create({
       data: {
         busNumber,
-        capacity: parseInt(capacity) || 50,
+        capacity: parseInt(String(capacity)) || 50,
         driverName: driverName || null,
         driverPhone: driverPhone || null,
         conductorName: conductorName || null,
@@ -151,7 +146,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       message: 'Bus created successfully',
       bus
-    });
+    }, { status: 201 });
 
   } catch (error) {
     logger.error('Error creating bus:', error);

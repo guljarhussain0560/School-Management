@@ -19,11 +19,10 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const status = searchParams.get('status');
-    const search = searchParams.get('search') || '';
+    const search = searchParams.get('search');
 
     const skip = (page - 1) * limit;
 
-    // Build where clause
     const where: any = {
       schoolId: session.user.schoolId!
     };
@@ -35,7 +34,7 @@ export async function GET(request: NextRequest) {
     if (search) {
       where.OR = [
         { routeName: { contains: search, mode: 'insensitive' } },
-        { bus: { busNumber: { contains: search, mode: 'insensitive' } } }
+        { delayReason: { contains: search, mode: 'insensitive' } }
       ];
     }
 
@@ -47,17 +46,10 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
         include: {
           bus: {
-            select: { id: true, busNumber: true, busName: true, driverName: true, capacity: true }
+            select: { id: true, busNumber: true, status: true }
           },
           manager: {
             select: { id: true, name: true, email: true }
-          },
-          students: {
-            select: { id: true, studentId: true, name: true, class: {
-                select: {
-                  classCode: true, sectionName: true }
-              }
-            }
           }
         }
       }),
@@ -96,25 +88,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const {
-      routeName,
-      routeCode,
-      description,
-      startLocation,
-      endLocation,
-      totalDistance,
-      estimatedDuration,
-      isActive = true
-    } = await request.json();
-
-    if (!routeName || !routeCode || !startLocation || !endLocation) {
+    if (!['ADMIN', 'TRANSPORT'].includes(session.user.role)) {
       return NextResponse.json(
-        { error: 'Route name, code, start location, and end location are required' },
+        { error: 'Forbidden - Transport or Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { routeName, status = 'ON_TIME', busId, delayReason } = body;
+
+    if (!routeName) {
+      return NextResponse.json(
+        { error: 'Route name is required' },
         { status: 400 }
       );
     }
 
-    // Check if route code already exists
     const existingRoute = await prisma.busRoute.findFirst({
       where: {
         routeName,
@@ -124,32 +114,32 @@ export async function POST(request: NextRequest) {
 
     if (existingRoute) {
       return NextResponse.json(
-        { error: 'Route code already exists' },
+        { error: 'Route name already exists' },
         { status: 400 }
       );
     }
 
-    // Find or assign bus
-    const firstBus = await prisma.bus.findFirst({ where: { schoolId: session.user.schoolId! } });
+    const firstBus = busId ? { id: busId } : await prisma.bus.findFirst({ where: { schoolId: session.user.schoolId! } });
     const route = await prisma.busRoute.create({
       data: {
         routeName,
         busId: firstBus?.id || '',
-        status: 'ON_TIME',
+        status: (status as any) || 'ON_TIME',
+        delayReason: delayReason || null,
         managedBy: session.user.id,
         schoolId: session.user.schoolId!
       },
       include: {
-        manager: {
-          select: { id: true, name: true, email: true }
+        bus: {
+          select: { id: true, busNumber: true, status: true }
         }
       }
     });
 
     return NextResponse.json({
-      message: 'Bus route created successfully',
+      message: 'Route created successfully',
       route
-    });
+    }, { status: 201 });
 
   } catch (error) {
     logger.error('Error creating bus route:', error);
