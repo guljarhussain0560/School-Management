@@ -7,10 +7,11 @@ export default withAuth(
     const { pathname } = req.nextUrl
 
     // Public routes that don't require authentication
-    const publicRoutes = ['/', '/login', '/signup']
+    const publicRoutes = ['/', '/login', '/signup', '/api/health']
     if (publicRoutes.includes(pathname)) {
       return NextResponse.next()
     }
+
 
     // If no token, redirect to login
     if (!token) {
@@ -76,10 +77,11 @@ export default withAuth(
         const { pathname } = req.nextUrl
         
         // Allow access to public routes
-        const publicRoutes = ['/', '/login', '/signup']
+        const publicRoutes = ['/', '/login', '/signup', '/api/health']
         if (publicRoutes.includes(pathname)) {
           return true
         }
+
 
         // Require authentication for all other routes
         return !!token
