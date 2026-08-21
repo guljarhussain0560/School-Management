@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -34,7 +35,7 @@ export async function GET(
     return NextResponse.json({ event });
 
   } catch (error) {
-    console.error('Error fetching event:', error);
+    logger.error('Error fetching event:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -126,7 +127,7 @@ export async function PUT(
     return NextResponse.json({ event });
 
   } catch (error) {
-    console.error('Error updating event:', error);
+    logger.error('Error updating event:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -171,7 +172,7 @@ export async function DELETE(
     return NextResponse.json({ message: 'Event deleted successfully' });
 
   } catch (error) {
-    console.error('Error deleting event:', error);
+    logger.error('Error deleting event:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

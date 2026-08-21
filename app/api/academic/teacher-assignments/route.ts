@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
       assignments
     })
   } catch (error) {
-    console.error('Error fetching teacher assignments:', error)
+    logger.error('Error fetching teacher assignments:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -150,7 +151,7 @@ export async function POST(request: NextRequest) {
       message: 'Teacher assignment created successfully'
     })
   } catch (error) {
-    console.error('Error creating teacher assignment:', error)
+    logger.error('Error creating teacher assignment:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -212,7 +213,7 @@ export async function DELETE(request: NextRequest) {
       message: 'Teacher assignment deleted successfully'
     })
   } catch (error) {
-    console.error('Error deleting teacher assignment:', error)
+    logger.error('Error deleting teacher assignment:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

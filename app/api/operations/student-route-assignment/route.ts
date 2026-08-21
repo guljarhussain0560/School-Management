@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -100,7 +101,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ assignments });
 
   } catch (error) {
-    console.error('Error fetching student route assignments:', error);
+    logger.error('Error fetching student route assignments:', error);
     return NextResponse.json(
       { error: 'Failed to fetch student route assignments' },
       { status: 500 }
@@ -207,7 +208,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error assigning student to route:', error);
+    logger.error('Error assigning student to route:', error);
     return NextResponse.json(
       { error: 'Failed to assign student to route' },
       { status: 500 }
@@ -269,7 +270,7 @@ export async function DELETE(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error unassigning student from route:', error);
+    logger.error('Error unassigning student from route:', error);
     return NextResponse.json(
       { error: 'Failed to unassign student from route' },
       { status: 500 }

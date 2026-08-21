@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -89,7 +90,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Get expenses error:', error)
+    logger.error('Get expenses error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -159,7 +160,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error) {
-    console.error('Record expense error:', error)
+    logger.error('Record expense error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

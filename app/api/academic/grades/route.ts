@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -81,7 +82,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching grades:', error);
+    logger.error('Error fetching grades:', error);
     return NextResponse.json(
       { error: 'Failed to fetch grades' },
       { status: 500 }
@@ -178,7 +179,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error creating grade:', error);
+    logger.error('Error creating grade:', error);
     return NextResponse.json(
       { error: 'Failed to create grade' },
       { status: 500 }

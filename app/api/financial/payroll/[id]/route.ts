@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -89,7 +90,7 @@ export async function PATCH(
     })
 
   } catch (error) {
-    console.error('Update payroll status error:', error)
+    logger.error('Update payroll status error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

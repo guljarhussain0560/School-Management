@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -45,7 +46,7 @@ export async function PATCH(
     })
 
   } catch (error) {
-    console.error('Update budget expense status error:', error)
+    logger.error('Update budget expense status error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -87,7 +88,7 @@ export async function GET(
     return NextResponse.json({ expense })
 
   } catch (error) {
-    console.error('Get budget expense error:', error)
+    logger.error('Get budget expense error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

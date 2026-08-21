@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient, AlertType, AlertPriority, AlertStatus } from '@prisma/client';
 import { getServerSession } from 'next-auth';
@@ -30,7 +31,7 @@ export async function GET() {
 
     return NextResponse.json({ safetyAlerts });
   } catch (error) {
-    console.error('Error fetching safety alerts:', error);
+    logger.error('Error fetching safety alerts:', error);
     return NextResponse.json(
       { error: 'Failed to fetch safety alerts' },
       { status: 500 }
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
       alert: safetyAlert
     });
   } catch (error) {
-    console.error('Error creating safety alert:', error);
+    logger.error('Error creating safety alert:', error);
     return NextResponse.json(
       { error: 'Failed to create safety alert' },
       { status: 500 }
@@ -131,7 +132,7 @@ export async function PUT(request: NextRequest) {
       message: 'Alerts synced to dashboard successfully' 
     });
   } catch (error) {
-    console.error('Error syncing alerts:', error);
+    logger.error('Error syncing alerts:', error);
     return NextResponse.json(
       { error: 'Failed to sync alerts' },
       { status: 500 }

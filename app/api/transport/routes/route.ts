@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching bus routes:', error);
+    logger.error('Error fetching bus routes:', error);
     return NextResponse.json(
       { error: 'Failed to fetch bus routes' },
       { status: 500 }
@@ -151,7 +152,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error creating bus route:', error);
+    logger.error('Error creating bus route:', error);
     return NextResponse.json(
       { error: 'Failed to create bus route' },
       { status: 500 }

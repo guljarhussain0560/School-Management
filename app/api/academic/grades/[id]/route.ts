@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -60,7 +61,7 @@ export async function GET(
     return NextResponse.json({ grade: gradeData });
 
   } catch (error) {
-    console.error('Error fetching grade:', error);
+    logger.error('Error fetching grade:', error);
     return NextResponse.json(
       { error: 'Failed to fetch grade' },
       { status: 500 }
@@ -155,7 +156,7 @@ export async function PUT(
     });
 
   } catch (error) {
-    console.error('Error updating grade:', error);
+    logger.error('Error updating grade:', error);
     return NextResponse.json(
       { error: 'Failed to update grade' },
       { status: 500 }
@@ -214,7 +215,7 @@ export async function DELETE(
     });
 
   } catch (error) {
-    console.error('Error deleting grade:', error);
+    logger.error('Error deleting grade:', error);
     return NextResponse.json(
       { error: 'Failed to delete grade' },
       { status: 500 }

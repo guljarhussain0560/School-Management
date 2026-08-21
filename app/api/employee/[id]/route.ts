@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -43,7 +44,7 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('Get employee error:', error)
+    logger.error('Get employee error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -109,7 +110,7 @@ export async function PUT(
     })
 
   } catch (error) {
-    console.error('Update employee status error:', error)
+    logger.error('Update employee status error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching exam results:', error);
+    logger.error('Error fetching exam results:', error);
     return NextResponse.json(
       { error: 'Failed to fetch exam results' },
       { status: 500 }
@@ -187,7 +188,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error creating exam result:', error);
+    logger.error('Error creating exam result:', error);
     return NextResponse.json(
       { error: 'Failed to create exam result' },
       { status: 500 }

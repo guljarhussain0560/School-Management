@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('School registration error:', error)
+    logger.error('School registration error:', error)
     return NextResponse.json(
       { error: 'Failed to register school' },
       { status: 500 }
@@ -125,7 +126,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ school })
 
   } catch (error) {
-    console.error('Get school error:', error)
+    logger.error('Get school error:', error)
     return NextResponse.json(
       { error: 'Failed to get school information' },
       { status: 500 }

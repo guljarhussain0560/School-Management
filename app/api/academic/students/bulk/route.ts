@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -173,7 +174,7 @@ export async function POST(request: NextRequest) {
         students.push(student)
         console.log(`Successfully created student: ${student.name}`)
       } catch (error) {
-        console.error(`Error processing row ${i + 2}:`, error)
+        logger.error(`Error processing row ${i + 2}:`, error)
         errors.push(`Row ${i + 2}: ${error instanceof Error ? error.message : 'Unknown error'}`)
       }
     }
@@ -188,7 +189,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error) {
-    console.error('Error in bulk student upload:', error)
+    logger.error('Error in bulk student upload:', error)
     return NextResponse.json(
       { error: 'Failed to process bulk upload' },
       { status: 500 }
@@ -232,7 +233,7 @@ export async function GET() {
     })
 
   } catch (error) {
-    console.error('Error generating template:', error)
+    logger.error('Error generating template:', error)
     return NextResponse.json(
       { error: 'Failed to generate template' },
       { status: 500 }

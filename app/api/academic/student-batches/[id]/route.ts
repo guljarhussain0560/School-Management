@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -53,7 +54,7 @@ export async function GET(
     return NextResponse.json({ batch });
 
   } catch (error) {
-    console.error('Error fetching student batch:', error);
+    logger.error('Error fetching student batch:', error);
     return NextResponse.json(
       { error: 'Failed to fetch student batch' },
       { status: 500 }
@@ -144,7 +145,7 @@ export async function PUT(
     });
 
   } catch (error) {
-    console.error('Error updating student batch:', error);
+    logger.error('Error updating student batch:', error);
     return NextResponse.json(
       { error: 'Failed to update student batch' },
       { status: 500 }
@@ -201,7 +202,7 @@ export async function DELETE(
     });
 
   } catch (error) {
-    console.error('Error deleting student batch:', error);
+    logger.error('Error deleting student batch:', error);
     return NextResponse.json(
       { error: 'Failed to delete student batch' },
       { status: 500 }

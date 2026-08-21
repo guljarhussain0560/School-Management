@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -70,7 +71,7 @@ export async function PUT(
     })
 
   } catch (error) {
-    console.error('Update password error:', error)
+    logger.error('Update password error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -85,7 +86,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ students });
 
   } catch (error) {
-    console.error('Error searching students:', error);
+    logger.error('Error searching students:', error);
     return NextResponse.json(
       { error: 'Failed to search students' },
       { status: 500 }

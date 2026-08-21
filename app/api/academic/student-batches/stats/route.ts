@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -98,7 +99,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching batch statistics:', error);
+    logger.error('Error fetching batch statistics:', error);
     return NextResponse.json(
       { error: 'Failed to fetch batch statistics' },
       { status: 500 }

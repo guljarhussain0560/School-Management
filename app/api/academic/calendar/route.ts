@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ events });
 
   } catch (error) {
-    console.error('Error fetching calendar events:', error);
+    logger.error('Error fetching calendar events:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ event }, { status: 201 });
 
   } catch (error) {
-    console.error('Error creating calendar event:', error);
+    logger.error('Error creating calendar event:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

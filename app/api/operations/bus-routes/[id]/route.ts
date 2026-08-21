@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -51,7 +52,7 @@ export async function GET(
     return NextResponse.json({ route });
 
   } catch (error) {
-    console.error('Error fetching bus route:', error);
+    logger.error('Error fetching bus route:', error);
     return NextResponse.json(
       { error: 'Failed to fetch bus route' },
       { status: 500 }
@@ -169,7 +170,7 @@ export async function PUT(
     });
 
   } catch (error) {
-    console.error('Error updating bus route:', error);
+    logger.error('Error updating bus route:', error);
     return NextResponse.json(
       { error: 'Failed to update bus route' },
       { status: 500 }
@@ -226,7 +227,7 @@ export async function DELETE(
     });
 
   } catch (error) {
-    console.error('Error deleting bus route:', error);
+    logger.error('Error deleting bus route:', error);
     return NextResponse.json(
       { error: 'Failed to delete bus route' },
       { status: 500 }

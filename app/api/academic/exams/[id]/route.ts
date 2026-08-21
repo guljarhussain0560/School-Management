@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -52,7 +53,7 @@ export async function GET(
     return NextResponse.json({ exam });
 
   } catch (error) {
-    console.error('Error fetching exam:', error);
+    logger.error('Error fetching exam:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -136,7 +137,7 @@ export async function PUT(
     return NextResponse.json({ exam });
 
   } catch (error) {
-    console.error('Error updating exam:', error);
+    logger.error('Error updating exam:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -181,7 +182,7 @@ export async function DELETE(
     return NextResponse.json({ message: 'Exam deleted successfully' });
 
   } catch (error) {
-    console.error('Error deleting exam:', error);
+    logger.error('Error deleting exam:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

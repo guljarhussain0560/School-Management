@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
       feeCollections
     })
   } catch (error) {
-    console.error('Error fetching fee collections:', error)
+    logger.error('Error fetching fee collections:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -175,7 +176,7 @@ export async function POST(request: NextRequest) {
       message: 'Fee collection recorded successfully'
     })
   } catch (error) {
-    console.error('Error creating fee collection:', error)
+    logger.error('Error creating fee collection:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -257,7 +258,7 @@ export async function PUT(request: NextRequest) {
       message: 'Fee collection updated successfully'
     })
   } catch (error) {
-    console.error('Error updating fee collection:', error)
+    logger.error('Error updating fee collection:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -311,7 +312,7 @@ export async function DELETE(request: NextRequest) {
       message: 'Fee collection deleted successfully'
     })
   } catch (error) {
-    console.error('Error deleting fee collection:', error)
+    logger.error('Error deleting fee collection:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

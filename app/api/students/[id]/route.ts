@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -42,7 +43,7 @@ export async function GET(
     return NextResponse.json({ student });
 
   } catch (error) {
-    console.error('Get student error:', error);
+    logger.error('Get student error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -129,7 +130,7 @@ export async function PUT(
     });
 
   } catch (error) {
-    console.error('Update student error:', error);
+    logger.error('Update student error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -163,7 +164,7 @@ export async function DELETE(
     });
 
   } catch (error) {
-    console.error('Delete student error:', error);
+    logger.error('Delete student error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

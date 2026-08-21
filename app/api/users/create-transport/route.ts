@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
     )
 
     if (!emailResult.success) {
-      console.error('Failed to send credentials email:', emailResult.error)
+      logger.error('Failed to send credentials email:', emailResult.error)
       // Don't fail the request, just log the error
     }
 
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error) {
-    console.error('Create transport manager error:', error)
+    logger.error('Create transport manager error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

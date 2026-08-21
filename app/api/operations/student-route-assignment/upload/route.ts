@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -130,7 +131,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error processing Excel upload:', error);
+    logger.error('Error processing Excel upload:', error);
     return NextResponse.json(
       { error: 'Failed to process Excel upload' },
       { status: 500 }
@@ -236,7 +237,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error generating Excel template:', error);
+    logger.error('Error generating Excel template:', error);
     return NextResponse.json(
       { error: 'Failed to generate Excel template' },
       { status: 500 }

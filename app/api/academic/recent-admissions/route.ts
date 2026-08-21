@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -122,7 +123,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error fetching recent admissions:', error)
+    logger.error('Error fetching recent admissions:', error)
     return NextResponse.json(
       { error: 'Failed to fetch recent admissions' },
       { status: 500 }
@@ -155,7 +156,7 @@ export async function PUT(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error updating admission status:', error)
+    logger.error('Error updating admission status:', error)
     return NextResponse.json(
       { error: 'Failed to update admission status' },
       { status: 500 }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -39,7 +40,7 @@ export async function GET(
     return NextResponse.json({ log })
 
   } catch (error) {
-    console.error('Error fetching maintenance log:', error)
+    logger.error('Error fetching maintenance log:', error)
     return NextResponse.json(
       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -101,7 +102,7 @@ export async function PUT(
     })
 
   } catch (error) {
-    console.error('Error updating maintenance log:', error)
+    logger.error('Error updating maintenance log:', error)
     return NextResponse.json(
       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -148,7 +149,7 @@ export async function DELETE(
     })
 
   } catch (error) {
-    console.error('Error deleting maintenance log:', error)
+    logger.error('Error deleting maintenance log:', error)
     return NextResponse.json(
       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

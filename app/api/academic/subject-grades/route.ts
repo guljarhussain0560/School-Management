@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ subjectGrades });
 
   } catch (error) {
-    console.error('Error fetching subject grades:', error);
+    logger.error('Error fetching subject grades:', error);
     return NextResponse.json(
       { error: 'Failed to fetch subject grades' },
       { status: 500 }
@@ -120,7 +121,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error assigning subject to class:', error);
+    logger.error('Error assigning subject to class:', error);
     return NextResponse.json(
       { error: 'Failed to assign subject to class' },
       { status: 500 }
@@ -175,7 +176,7 @@ export async function DELETE(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error removing subject assignment:', error);
+    logger.error('Error removing subject assignment:', error);
     return NextResponse.json(
       { error: 'Failed to remove subject assignment' },
       { status: 500 }

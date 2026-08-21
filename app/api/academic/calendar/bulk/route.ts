@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error creating bulk events:', error);
+    logger.error('Error creating bulk events:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

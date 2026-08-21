@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
@@ -11,7 +12,7 @@ export async function GET() {
 
     return NextResponse.json({ maintenanceItems });
   } catch (error) {
-    console.error('Error fetching maintenance items:', error);
+    logger.error('Error fetching maintenance items:', error);
     return NextResponse.json(
       { error: 'Failed to fetch maintenance items' },
       { status: 500 }
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
       item: maintenanceItem
     });
   } catch (error) {
-    console.error('Error creating maintenance item:', error);
+    logger.error('Error creating maintenance item:', error);
     return NextResponse.json(
       { error: 'Failed to create maintenance item' },
       { status: 500 }
@@ -89,7 +90,7 @@ export async function PUT(request: NextRequest) {
       item: updatedItem
     });
   } catch (error) {
-    console.error('Error updating maintenance item:', error);
+    logger.error('Error updating maintenance item:', error);
     return NextResponse.json(
       { error: 'Failed to update maintenance item' },
       { status: 500 }

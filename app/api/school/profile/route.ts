@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching school profile:', error);
+    logger.error('Error fetching school profile:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -198,7 +199,7 @@ export async function PUT(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error updating school profile:', error);
+    logger.error('Error updating school profile:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

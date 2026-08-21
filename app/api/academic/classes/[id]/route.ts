@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -56,7 +57,7 @@ export async function GET(
     return NextResponse.json({ class: classData });
 
   } catch (error) {
-    console.error('Error fetching class:', error);
+    logger.error('Error fetching class:', error);
     return NextResponse.json(
       { error: 'Failed to fetch class' },
       { status: 500 }
@@ -149,7 +150,7 @@ export async function PUT(
     });
 
   } catch (error) {
-    console.error('Error updating class:', error);
+    logger.error('Error updating class:', error);
     return NextResponse.json(
       { error: 'Failed to update class' },
       { status: 500 }
@@ -206,7 +207,7 @@ export async function DELETE(
     });
 
   } catch (error) {
-    console.error('Error deleting class:', error);
+    logger.error('Error deleting class:', error);
     return NextResponse.json(
       { error: 'Failed to delete class' },
       { status: 500 }

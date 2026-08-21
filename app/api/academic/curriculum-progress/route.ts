@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
       progress
     })
   } catch (error) {
-    console.error('Error fetching curriculum progress:', error)
+    logger.error('Error fetching curriculum progress:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -160,7 +161,7 @@ export async function POST(request: NextRequest) {
       message: 'Curriculum progress updated successfully'
     })
   } catch (error) {
-    console.error('Error updating curriculum progress:', error)
+    logger.error('Error updating curriculum progress:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -233,7 +234,7 @@ export async function PUT(request: NextRequest) {
       message: 'Curriculum progress updated successfully'
     })
   } catch (error) {
-    console.error('Error updating curriculum progress:', error)
+    logger.error('Error updating curriculum progress:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
