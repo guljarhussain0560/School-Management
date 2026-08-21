@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
+import { createFeeCollection } from '@/lib/api-client';
+
 
 interface Student {
   id: string;
@@ -87,23 +89,10 @@ const FinancialDataForm = () => {
     setLoading(true);
     
     try {
-      const response = await fetch('/api/financial/fee-collection', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(feeForm)
-      });
-
-      if (response.ok) {
-        toast.success('Payment recorded successfully');
-        setFeeForm({ studentId: '', paymentMode: '', amount: '' });
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        logger.error('Failed to record fee payment:', { status: response.status, error: errorData });
-        toast.error('Failed to record payment');
-      }
+      await createFeeCollection(feeForm);
+      setFeeForm({ studentId: '', paymentMode: '', amount: '' });
     } catch (error) {
       logger.error('Exception recording fee payment:', error);
-      toast.error('Error recording payment');
     } finally {
       setLoading(false);
     }

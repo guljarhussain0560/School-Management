@@ -1,44 +1,44 @@
 'use client'
 
-import { logger } from '@/lib/logger'
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import React, { useState, useEffect } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
 import { 
-  Users, DollarSign, Bus, Briefcase, TrendingUp, TrendingDown,
-  UserPlus, FileSpreadsheet, Calendar, AlertCircle, CheckCircle,
-  GraduationCap, BookOpen, Clock, BarChart3, PieChart
-} from 'lucide-react';
-import { toast } from 'sonner';
+  Users, DollarSign, Bus, Briefcase, 
+  UserPlus, FileSpreadsheet, AlertCircle, CheckCircle,
+  GraduationCap, Clock
+} from 'lucide-react'
+import { logger } from '@/lib/logger'
+import { apiGet } from '@/lib/api-client'
 
 interface DashboardStats {
-  totalStudents: number;
-  totalRevenue: number;
-  activeBuses: number;
-  totalEmployees: number;
-  feeCollectionRate: number;
-  attendanceRate: number;
-  recentAdmissions: number;
-  pendingTasks: number;
+  totalStudents: number
+  totalRevenue: number
+  activeBuses: number
+  totalEmployees: number
+  feeCollectionRate: number
+  attendanceRate: number
+  recentAdmissions: number
+  pendingTasks: number
 }
 
 interface RecentActivity {
-  id: string;
-  type: 'admission' | 'payment' | 'maintenance' | 'alert' | 'academic';
-  message: string;
-  timestamp: string;
-  status: 'success' | 'warning' | 'error' | 'info';
+  id: string
+  type: 'admission' | 'payment' | 'maintenance' | 'alert' | 'academic'
+  message: string
+  timestamp: string
+  status: 'success' | 'warning' | 'error' | 'info'
 }
 
 interface QuickAction {
-  id: string;
-  title: string;
-  description: string;
-  icon: React.ComponentType<any>;
-  action: () => void;
-  color: string;
+  id: string
+  title: string
+  description: string
+  icon: React.ComponentType<any>
+  action: () => void
+  color: string
 }
 
 const DashboardOverview: React.FC = () => {
@@ -50,58 +50,45 @@ const DashboardOverview: React.FC = () => {
     feeCollectionRate: 0,
     attendanceRate: 0,
     recentAdmissions: 0,
-    pendingTasks: 0
-  });
+    pendingTasks: 0,
+  })
 
-  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // Fetch dashboard data
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    fetchDashboardData()
+  }, [])
 
   const fetchDashboardData = async () => {
     try {
-      setLoading(true);
-      
-      // Fetch stats from multiple endpoints
-      const [studentsRes, revenueRes, busesRes, employeesRes, activitiesRes] = await Promise.all([
-        fetch('/api/dashboard/stats/students'),
-        fetch('/api/dashboard/stats/revenue'),
-        fetch('/api/dashboard/stats/buses'),
-        fetch('/api/dashboard/stats/employees'),
-        fetch('/api/dashboard/activities')
-      ]);
-
+      setLoading(true)
       const [studentsData, revenueData, busesData, employeesData, activitiesData] = await Promise.all([
-        studentsRes.json(),
-        revenueRes.json(),
-        revenueRes.json(),
-        busesRes.json(),
-        employeesRes.json(),
-        activitiesRes.json()
-      ]);
+        apiGet<any>('/api/dashboard/stats/students', { showErrorToast: false }).catch(() => ({})),
+        apiGet<any>('/api/dashboard/stats/revenue', { showErrorToast: false }).catch(() => ({})),
+        apiGet<any>('/api/dashboard/stats/buses', { showErrorToast: false }).catch(() => ({})),
+        apiGet<any>('/api/dashboard/stats/employees', { showErrorToast: false }).catch(() => ({})),
+        apiGet<any>('/api/dashboard/activities', { showErrorToast: false }).catch(() => ({})),
+      ])
 
       setStats({
-        totalStudents: studentsData.count || 0,
-        totalRevenue: revenueData.total || 0,
-        activeBuses: busesData.active || 0,
-        totalEmployees: employeesData.count || 0,
-        feeCollectionRate: revenueData.collectionRate || 0,
-        attendanceRate: studentsData.attendanceRate || 0,
-        recentAdmissions: studentsData.recentAdmissions || 0,
-        pendingTasks: activitiesData.pendingTasks || 0
-      });
+        totalStudents: studentsData?.count || 0,
+        totalRevenue: revenueData?.total || 0,
+        activeBuses: busesData?.active || 0,
+        totalEmployees: employeesData?.count || 0,
+        feeCollectionRate: revenueData?.collectionRate || 0,
+        attendanceRate: studentsData?.attendanceRate || 0,
+        recentAdmissions: studentsData?.recentAdmissions || 0,
+        pendingTasks: activitiesData?.pendingTasks || 0,
+      })
 
-      setRecentActivities(activitiesData.activities || []);
+      setRecentActivities(activitiesData?.activities || [])
     } catch (error) {
-      logger.error('Error fetching dashboard data:', error);
-      toast.error('Failed to load dashboard data');
+      logger.error('Error fetching dashboard data:', error as Error, { context: 'DashboardOverview' })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const quickActions: QuickAction[] = [
     {
@@ -110,10 +97,9 @@ const DashboardOverview: React.FC = () => {
       description: 'Register a new student',
       icon: UserPlus,
       action: () => {
-        // Navigate to student registration
-        window.location.href = '/admin?section=admissions&subsection=student-onboarding';
+        window.location.href = '/admin?section=admissions&subsection=student-onboarding'
       },
-      color: 'bg-blue-500 hover:bg-blue-600'
+      color: 'bg-blue-500 hover:bg-blue-600',
     },
     {
       id: 'collect-fee',
@@ -121,10 +107,9 @@ const DashboardOverview: React.FC = () => {
       description: 'Record fee payment',
       icon: DollarSign,
       action: () => {
-        // Navigate to fee collection
-        window.location.href = '/admin?section=financial&subsection=fee-collections';
+        window.location.href = '/admin?section=financial&subsection=fee-collections'
       },
-      color: 'bg-green-500 hover:bg-green-600'
+      color: 'bg-green-500 hover:bg-green-600',
     },
     {
       id: 'bus-status',
@@ -132,10 +117,9 @@ const DashboardOverview: React.FC = () => {
       description: 'Check transport status',
       icon: Bus,
       action: () => {
-        // Navigate to transport
-        window.location.href = '/admin?section=transport&subsection=operations-dashboard';
+        window.location.href = '/admin?section=transport&subsection=operations-dashboard'
       },
-      color: 'bg-purple-500 hover:bg-purple-600'
+      color: 'bg-purple-500 hover:bg-purple-600',
     },
     {
       id: 'generate-report',
@@ -143,40 +127,39 @@ const DashboardOverview: React.FC = () => {
       description: 'Create system reports',
       icon: FileSpreadsheet,
       action: () => {
-        // Navigate to reports
-        window.location.href = '/admin?section=reports&subsection=academic-reports';
+        window.location.href = '/admin?section=reports&subsection=academic-reports'
       },
-      color: 'bg-orange-500 hover:bg-orange-600'
-    }
-  ];
+      color: 'bg-orange-500 hover:bg-orange-600',
+    },
+  ]
 
   const getActivityIcon = (type: string) => {
     switch (type) {
-      case 'admission': return <UserPlus className="h-4 w-4" />;
-      case 'payment': return <DollarSign className="h-4 w-4" />;
-      case 'maintenance': return <Bus className="h-4 w-4" />;
-      case 'alert': return <AlertCircle className="h-4 w-4" />;
-      case 'academic': return <GraduationCap className="h-4 w-4" />;
-      default: return <Clock className="h-4 w-4" />;
+      case 'admission': return <UserPlus className="h-4 w-4" />
+      case 'payment': return <DollarSign className="h-4 w-4" />
+      case 'maintenance': return <Bus className="h-4 w-4" />
+      case 'alert': return <AlertCircle className="h-4 w-4" />
+      case 'academic': return <GraduationCap className="h-4 w-4" />
+      default: return <Clock className="h-4 w-4" />
     }
-  };
+  }
 
   const getActivityColor = (status: string) => {
     switch (status) {
-      case 'success': return 'text-green-600 bg-green-100';
-      case 'warning': return 'text-yellow-600 bg-yellow-100';
-      case 'error': return 'text-red-600 bg-red-100';
-      case 'info': return 'text-blue-600 bg-blue-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'success': return 'text-green-600 bg-green-100'
+      case 'warning': return 'text-yellow-600 bg-yellow-100'
+      case 'error': return 'text-red-600 bg-red-100'
+      case 'info': return 'text-blue-600 bg-blue-100'
+      default: return 'text-gray-600 bg-gray-100'
     }
-  };
+  }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
-    );
+    )
   }
 
   return (
@@ -300,7 +283,7 @@ const DashboardOverview: React.FC = () => {
                 </div>
               ))}
               {recentActivities.length === 0 && (
-                <p className="text-sm text-gray-500 text-center py-4">No recent activities</p>
+                <p className="text-sm text-muted-foreground text-center py-4">No recent activities</p>
               )}
             </div>
           </CardContent>
@@ -314,7 +297,7 @@ const DashboardOverview: React.FC = () => {
           <CardContent>
             <div className="grid grid-cols-2 gap-3">
               {quickActions.map((action) => {
-                const IconComponent = action.icon;
+                const IconComponent = action.icon
                 return (
                   <Button
                     key={action.id}
@@ -325,10 +308,10 @@ const DashboardOverview: React.FC = () => {
                     <IconComponent className="h-6 w-6" />
                     <div className="text-center">
                       <p className="text-xs font-medium">{action.title}</p>
-                      <p className="text-xs text-gray-500">{action.description}</p>
+                      <p className="text-xs text-muted-foreground">{action.description}</p>
                     </div>
                   </Button>
-                );
+                )
               })}
             </div>
           </CardContent>
@@ -339,7 +322,7 @@ const DashboardOverview: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5" />
+            <AlertCircle className="h-5 w-5 text-amber-500" />
             Alerts & Notifications
           </CardTitle>
         </CardHeader>
@@ -378,7 +361,7 @@ const DashboardOverview: React.FC = () => {
         </CardContent>
       </Card>
     </div>
-  );
-};
+  )
+}
 
-export default DashboardOverview;
+export default DashboardOverview

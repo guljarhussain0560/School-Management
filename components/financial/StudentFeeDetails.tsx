@@ -3,7 +3,6 @@
 import { logger } from '@/lib/logger'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
@@ -17,21 +16,21 @@ import {
   AlertCircle,
   Receipt
 } from 'lucide-react'
-import { toast } from 'sonner'
+import { apiGet, getStudents } from '@/lib/api-client'
 
 interface Student {
   id: string
   name: string
   studentId: string
-  class: {
+  class?: {
     id: string
-    className: string
-    classCode: string
+    className?: string
+    classCode?: string
   }
   batch?: {
     id: string
     batchName: string
-    batchCode: string
+    batchCode?: string
   }
 }
 
@@ -39,34 +38,21 @@ interface FeeStructure {
   id: string
   feeCode: string
   name: string
-  description?: string
   amount: number
   frequency: string
   category: string
   isMandatory: boolean
   isActive: boolean
   applicableFrom: string
-  applicableTo?: string
-  class?: {
-    id: string
-    className: string
-    classCode: string
-  }
-  batch?: {
-    id: string
-    batchName: string
-    batchCode: string
-  }
-  collections: Array<{
+  totalPaid?: number
+  pendingAmount?: number
+  isPaid?: boolean
+  collections?: {
     id: string
     amount: number
     status: string
     date: string
-    dueDate?: string
-  }>
-  totalPaid: number
-  pendingAmount: number
-  isPaid: boolean
+  }[]
 }
 
 interface StudentFeeDetailsProps {
@@ -85,17 +71,14 @@ export default function StudentFeeDetails({ studentId: propStudentId }: StudentF
       setSelectedStudentId(propStudentId)
       fetchStudentFeeDetails(propStudentId)
     } else {
-      fetchStudents()
+      fetchStudentsList()
     }
   }, [propStudentId])
 
-  const fetchStudents = async () => {
+  const fetchStudentsList = async () => {
     try {
-      const response = await fetch('/api/academic/students')
-      if (response.ok) {
-        const data = await response.json()
-        setStudents(data.students || [])
-      }
+      const data = await getStudents()
+      setStudents(data?.students || [])
     } catch (error) {
       logger.error('Error fetching students:', error)
     }
@@ -106,17 +89,15 @@ export default function StudentFeeDetails({ studentId: propStudentId }: StudentF
 
     try {
       setLoading(true)
-      const response = await fetch(`/api/financial/fee-structures/student?studentId=${studentId}`)
-      if (response.ok) {
-        const data = await response.json()
+      const data = await apiGet<any>(`/api/financial/fee-structures/student?studentId=${studentId}`, {
+        context: 'StudentFeeDetails',
+      })
+      if (data) {
         setStudent(data.student)
         setFeeStructures(data.feeStructures || [])
-      } else {
-        toast.error('Failed to fetch student fee details')
       }
     } catch (error) {
       logger.error('Error fetching student fee details:', error)
-      toast.error('Error fetching student fee details')
     } finally {
       setLoading(false)
     }
@@ -172,25 +153,16 @@ export default function StudentFeeDetails({ studentId: propStudentId }: StudentF
     const frequencies: { [key: string]: string } = {
       'MONTHLY': 'Monthly',
       'QUARTERLY': 'Quarterly',
-      'SEMESTERLY': 'Semesterly',
       'ANNUAL': 'Annual',
       'ONE_TIME': 'One Time'
     }
     return frequencies[frequency] || frequency
   }
 
-  const totalAmount = feeStructures.reduce((sum, fee) => sum + fee.amount, 0)
-  const totalPaid = feeStructures.reduce((sum, fee) => sum + fee.totalPaid, 0)
-  const totalPending = feeStructures.reduce((sum, fee) => sum + fee.pendingAmount, 0)
+  const totalAmount = feeStructures.reduce((sum, fs) => sum + fs.amount, 0)
+  const totalPaid = feeStructures.reduce((sum, fs) => sum + (fs.totalPaid || 0), 0)
+  const totalPending = feeStructures.reduce((sum, fs) => sum + (fs.pendingAmount ?? fs.amount), 0)
   const paidPercentage = totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-6">
@@ -210,12 +182,12 @@ export default function StudentFeeDetails({ studentId: propStudentId }: StudentF
               <div className="w-64">
                 <Select value={selectedStudentId} onValueChange={handleStudentChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select student" />
+                    <SelectValue placeholder="Select Student" />
                   </SelectTrigger>
                   <SelectContent>
-                    {students.map((student) => (
-                      <SelectItem key={student.id} value={student.id}>
-                        {student.name} ({student.studentId})
+                    {students.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name} ({s.studentId})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -226,6 +198,7 @@ export default function StudentFeeDetails({ studentId: propStudentId }: StudentF
         </CardHeader>
         {student && (
           <CardContent>
+            {/* Student Info & Summary */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               <div className="flex items-center gap-3 p-4 border rounded-lg">
                 <User className="h-8 w-8 text-blue-600" />
@@ -279,103 +252,67 @@ export default function StudentFeeDetails({ studentId: propStudentId }: StudentF
         )}
       </Card>
 
+      {/* Fee Breakdown */}
       {student && (
         <Card>
           <CardHeader>
-            <CardTitle>Fee Structure Details</CardTitle>
+            <CardTitle>Fee Breakdown</CardTitle>
             <CardDescription>
-              Detailed breakdown of all applicable fees for {student.name}
+              Detailed breakdown of all applicable fees and payment status
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
+            {loading ? (
+              <div className="text-center py-4">Loading fee details...</div>
+            ) : feeStructures.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">
+                No fee structures found for this student.
+              </div>
+            ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Fee Code</TableHead>
                     <TableHead>Fee Name</TableHead>
                     <TableHead>Category</TableHead>
-                    <TableHead>Amount</TableHead>
                     <TableHead>Frequency</TableHead>
-                    <TableHead>Paid Amount</TableHead>
-                    <TableHead>Pending</TableHead>
+                    <TableHead className="text-right">Total Amount</TableHead>
+                    <TableHead className="text-right">Paid Amount</TableHead>
+                    <TableHead className="text-right">Pending Amount</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Collections</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {feeStructures.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                        No fee structures found for this student
+                  {feeStructures.map((fee) => (
+                    <TableRow key={fee.id}>
+                      <TableCell className="font-medium">
+                        <div>
+                          <p>{fee.name}</p>
+                          <p className="text-xs text-muted-foreground">{fee.feeCode}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getCategoryBadgeVariant(fee.category)}>
+                          {getCategoryLabel(fee.category)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{getFrequencyLabel(fee.frequency)}</TableCell>
+                      <TableCell className="text-right font-medium">
+                        ₹{fee.amount.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right text-green-600 font-medium">
+                        ₹{(fee.totalPaid || 0).toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right text-red-600 font-medium">
+                        ₹{(fee.pendingAmount ?? fee.amount).toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(fee.isPaid ? 'PAID' : (fee.totalPaid || 0) > 0 ? 'PARTIAL' : 'PENDING')}
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    feeStructures.map((feeStructure) => (
-                      <TableRow key={feeStructure.id}>
-                        <TableCell className="font-mono text-sm">
-                          {feeStructure.feeCode}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {feeStructure.name}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getCategoryBadgeVariant(feeStructure.category)}>
-                            {getCategoryLabel(feeStructure.category)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          ₹{feeStructure.amount.toLocaleString()}
-                        </TableCell>
-                        <TableCell>
-                          {getFrequencyLabel(feeStructure.frequency)}
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-green-600 font-medium">
-                            ₹{feeStructure.totalPaid.toLocaleString()}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className={feeStructure.pendingAmount > 0 ? "text-red-600 font-medium" : "text-green-600"}>
-                            ₹{feeStructure.pendingAmount.toLocaleString()}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {feeStructure.isPaid ? (
-                            <Badge variant="default" className="bg-green-100 text-green-800">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Paid
-                            </Badge>
-                          ) : (
-                            <Badge variant="destructive">
-                              <AlertCircle className="h-3 w-3 mr-1" />
-                              Pending
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            {feeStructure.collections.length === 0 ? (
-                              <span className="text-muted-foreground text-sm">No payments</span>
-                            ) : (
-                              feeStructure.collections.map((collection) => (
-                                <div key={collection.id} className="flex items-center gap-2 text-sm">
-                                  {getStatusBadge(collection.status)}
-                                  <span>₹{collection.amount.toLocaleString()}</span>
-                                  <span className="text-muted-foreground">
-                                    {new Date(collection.date).toLocaleDateString()}
-                                  </span>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
+                  ))}
                 </TableBody>
               </Table>
-            </div>
+            )}
           </CardContent>
         </Card>
       )}
