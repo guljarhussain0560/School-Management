@@ -37,7 +37,7 @@ describe('/api/academic/attendance POST Handler', () => {
     const data = await res.json()
 
     expect(res.status).toBe(401)
-    expect(data.error).toBe('Unauthorized')
+    expect(data.error).toContain('Unauthorized')
   })
 
   it('returns 400 when payload fails Zod validation', async () => {

@@ -3,50 +3,33 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { recordAttendanceSchema } from '@/lib/validation'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session) {
+    if (!session || !['ADMIN', 'TEACHER'].includes(session.user.role)) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized - Admin or Teacher access required' },
         { status: 401 }
       )
     }
 
     const body = await request.json()
     const validation = recordAttendanceSchema.safeParse(body)
+
     if (!validation.success) {
       return NextResponse.json(
-        { error: validation.error.errors[0]?.message || 'Invalid attendance payload' },
+        { error: validation.error.errors[0]?.message || 'Invalid attendance payload', details: validation.error.errors },
         { status: 400 }
       )
     }
 
-    const { date, grade, subject, attendanceRecords } = validation.data
+    const { date, attendanceRecords } = validation.data
 
-    // Check if attendance already exists for this date (simplified check)
-    try {
-      const existingAttendance = await prisma.attendance.findFirst({
-        where: {
-          date: new Date(date),
-          schoolId: session.user.schoolId!!
-        }
-      })
-
-      if (existingAttendance) {
-        return NextResponse.json(
-          { error: 'Attendance already recorded for this date' },
-          { status: 400 }
-        )
-      }
-    } catch (checkError) {
-      console.log('Could not check existing attendance, proceeding with creation:', checkError instanceof Error ? checkError.message : 'Unknown error')
-    }
-
-    // Validate student IDs exist
-    const studentIds = attendanceRecords.map((record: any) => record.studentId)
+    // Verify all students belong to the school
+    const studentIds = attendanceRecords.map((r: any) => r.studentId)
     const existingStudents = await prisma.student.findMany({
       where: {
         id: { in: studentIds },
@@ -71,13 +54,10 @@ export async function POST(request: NextRequest) {
       studentId: record.studentId,
       classId: studentClassMap.get(record.studentId) || '',
       date: new Date(date),
-      isPresent: record.status === 'PRESENT', // Convert to boolean
+      isPresent: record.status === 'PRESENT',
       schoolId: session.user.schoolId || "",
       markedBy: session.user.id
     }))
-
-    console.log('Attendance data to create:', attendanceData)
-    console.log('Session user:', { id: session.user.id, schoolId: session.user.schoolId })
 
     let createdAttendance
     try {
@@ -85,8 +65,7 @@ export async function POST(request: NextRequest) {
         data: attendanceData
       })
     } catch (createError) {
-      console.error('Error creating attendance records:', createError)
-      // Try creating records one by one to identify which one fails
+      logger.error('Error creating attendance records bulk', createError as Error)
       const results = []
       for (const record of attendanceData) {
         try {
@@ -95,7 +74,7 @@ export async function POST(request: NextRequest) {
           })
           results.push(result)
         } catch (recordError) {
-          console.error('Error creating individual record:', record, recordError)
+          logger.error('Error creating individual record', recordError as Error, { record: String(record.studentId) })
           throw recordError
         }
       }
@@ -108,12 +87,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error recording attendance:', error)
-    console.error('Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      code: (error as any).code,
-      meta: (error as any).meta
-    })
+    logger.error('Error recording attendance', error as Error, { path: '/api/academic/attendance' })
     return NextResponse.json(
       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -133,11 +107,13 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
     const date = searchParams.get('date')
-    const grade = searchParams.get('grade')
-    const subject = searchParams.get('subject')
+    const classId = searchParams.get('classId')
+    const status = searchParams.get('status')
 
-    // Build where clause
+    const skip = (page - 1) * limit
     const where: any = {
       schoolId: session.user.schoolId
     }
@@ -146,28 +122,57 @@ export async function GET(request: NextRequest) {
       where.date = new Date(date)
     }
 
-    // Get attendance records
-    const attendanceRecords = await prisma.attendance.findMany({
-      where,
-      include: {
-        student: {
-          select: { id: true, studentId: true, name: true, rollNumber: true }
+    if (classId) {
+      where.classId = classId
+    }
+
+    if (status) {
+      where.isPresent = status === 'PRESENT'
+    }
+
+    const [attendanceRecords, total] = await Promise.all([
+      prisma.attendance.findMany({
+        where,
+        include: {
+          student: {
+            select: {
+              id: true,
+              studentId: true,
+              name: true,
+              rollNumber: true,
+              class: {
+                select: {
+                  classCode: true,
+                  sectionName: true
+                }
+              }
+            }
+          },
+          marker: {
+            select: {
+              name: true
+            }
+          }
         },
-        marker: {
-          select: { name: true }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
+        orderBy: { date: 'desc' },
+        skip,
+        take: limit
+      }),
+      prisma.attendance.count({ where })
+    ])
+
+    return NextResponse.json({
+      attendanceRecords,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
       }
     })
 
-    return NextResponse.json({
-      attendanceRecords
-    })
-
   } catch (error) {
-    console.error('Error fetching attendance records:', error)
+    logger.error('Get attendance error', error as Error, { path: '/api/academic/attendance' })
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

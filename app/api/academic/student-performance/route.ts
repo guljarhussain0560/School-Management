@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { submitStudentMarksSchema } from '@/lib/validation'
+import { logger } from '@/lib/logger'
 import * as XLSX from 'xlsx'
 
 export async function GET(request: NextRequest) {
@@ -100,7 +102,7 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('Error fetching student performances:', error)
+    logger.error('Error fetching student performances', error as Error, { path: '/api/academic/student-performance' })
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -145,7 +147,6 @@ export async function POST(request: NextRequest) {
 
       for (let i = 0; i < data.length; i++) {
         const row = data[i] as any
-        // Support multiple column name formats
         const studentId = row['Student ID'] || row['studentId'] || row['StudentID'] || row['Student_Id'] || row['student_id']
         const subject = row['Subject'] || row['subject'] || row['Subject_Name'] || row['subject_name']
         const grade = row['Grade'] || row['grade'] || row['Class'] || row['class'] || row['Grade_Level'] || row['grade_level']
@@ -155,20 +156,17 @@ export async function POST(request: NextRequest) {
         const examDate = row['Exam Date'] || row['examDate'] || row['ExamDate'] || row['Exam_Date'] || row['exam_date'] || row['Date'] || row['date']
         const remarks = row['Remarks'] || row['remarks'] || row['Comments'] || row['comments'] || row['Note'] || row['note']
 
-        // Validate required fields
         if (!studentId || !subject || !grade || !marks) {
           errors.push(`Row ${i + 2}: Missing required fields (Student ID, Subject, Grade, Marks)`)
           continue
         }
 
-        // Validate exam type
         const validExamTypes = ['Quiz', 'Test', 'Exam', 'Assignment', 'Project', 'Practical']
         if (examType && !validExamTypes.includes(examType)) {
           errors.push(`Row ${i + 2}: Invalid exam type '${examType}'. Must be one of: ${validExamTypes.join(', ')}`)
           continue
         }
 
-        // Find student by ID, studentId, roll number, or admission number
         const student = await prisma.student.findFirst({
           where: {
             OR: [
@@ -186,7 +184,6 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        // Find subject
         const subjectRecord = await prisma.subject.findFirst({
           where: {
             subjectName: {
@@ -198,20 +195,22 @@ export async function POST(request: NextRequest) {
         });
 
         if (!subjectRecord) {
-          errors.push(`Row ${i + 2}: Subject '${subject}' not found`)
+          errors.push(`Row ${i + 2}: Subject not found for: ${subject}`)
           continue
         }
 
-        // Find class
         const classRecord = await prisma.class.findFirst({
           where: {
-            classCode: { contains: grade, mode: 'insensitive' },
+            classCode: {
+              contains: grade,
+              mode: 'insensitive'
+            },
             schoolId: session.user.schoolId!
           }
         });
 
         if (!classRecord) {
-          errors.push(`Row ${i + 2}: Class '${grade}' not found`)
+          errors.push(`Row ${i + 2}: Class not found for grade: ${grade}`)
           continue
         }
 
@@ -223,9 +222,9 @@ export async function POST(request: NextRequest) {
               classId: classRecord.id,
               marks: parseFloat(marks),
               maxMarks: parseFloat(maxMarks),
-              examType,
+              examType: examType || 'Quiz',
               examDate: examDate ? new Date(examDate) : null,
-              remarks,
+              remarks: remarks || null,
               schoolId: session.user.schoolId!,
               createdBy: session.user.id
             }
@@ -246,15 +245,16 @@ export async function POST(request: NextRequest) {
 
     // Handle single record creation
     const body = await request.json()
-    const { studentId, subject, grade, marks, maxMarks, examType, examDate, remarks } = body
+    const validation = submitStudentMarksSchema.safeParse(body)
 
-    // Validate required fields
-    if (!studentId || !subject || !grade || !marks || !maxMarks) {
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: validation.error.errors[0]?.message || 'Invalid student marks data', details: validation.error.errors },
         { status: 400 }
       )
     }
+
+    const { studentId, subject, grade, marks, maxMarks, examType, examDate, remarks } = validation.data
 
     // Find subject
     const subjectRecord = await prisma.subject.findFirst({
@@ -314,8 +314,8 @@ export async function POST(request: NextRequest) {
         studentId,
         subjectId: subjectRecord.id,
         classId: classRecord.id,
-        marks: parseFloat(marks),
-        maxMarks: parseFloat(maxMarks),
+        marks: typeof marks === 'number' ? marks : parseFloat(marks),
+        maxMarks: typeof maxMarks === 'number' ? maxMarks : parseFloat(maxMarks),
         examType: examType || 'Quiz',
         examDate: examDate ? new Date(examDate) : null,
         remarks,
@@ -337,9 +337,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       performance,
       message: 'Student performance recorded successfully'
-    })
+    }, { status: 201 })
   } catch (error) {
-    console.error('Error creating student performance:', error)
+    logger.error('Error creating student performance:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

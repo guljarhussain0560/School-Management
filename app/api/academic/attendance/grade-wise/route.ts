@@ -2,43 +2,49 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session) {
+    if (!session || !['ADMIN', 'TEACHER'].includes(session.user.role)) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: 'Unauthorized - Admin or Teacher access required' },
+        { status: 403 }
       )
     }
 
     const body = await request.json()
-    const { date, grade, attendanceRecords } = body
+    const { grade, date, attendanceRecords } = body
 
-    // Validate required fields
-    if (!date || !grade || !attendanceRecords) {
+    // Validation
+    if (!grade || !date || !attendanceRecords || !Array.isArray(attendanceRecords)) {
       return NextResponse.json(
-        { error: 'Date, grade, and attendance records are required' },
+        { error: 'Grade, date, and attendance records are required' },
         { status: 400 }
       )
     }
 
-    // Validate student IDs exist
-    const studentIds = attendanceRecords.map((record: any) => record.studentId)
+    if (attendanceRecords.length === 0) {
+      return NextResponse.json(
+        { error: 'At least one attendance record is required' },
+        { status: 400 }
+      )
+    }
+
+    // Verify all students belong to the school
+    const studentIds = attendanceRecords.map((r: any) => r.studentId)
     const existingStudents = await prisma.student.findMany({
       where: {
         id: { in: studentIds },
-        class: {
-          classCode: { contains: `Class ${grade}`, mode: 'insensitive' }
-        },
         schoolId: session.user.schoolId!
       },
-      select: { id: true }
+      select: { id: true, classId: true }
     })
 
     const existingStudentIds = existingStudents.map(s => s.id)
+    const studentClassMap = new Map(existingStudents.map(s => [s.id, s.classId]))
     const invalidStudentIds = studentIds.filter((id: string) => !existingStudentIds.includes(id))
     
     if (invalidStudentIds.length > 0) {
@@ -54,19 +60,12 @@ export async function POST(request: NextRequest) {
         classCode: { contains: `Class ${grade}`, mode: 'insensitive' },
         schoolId: session.user.schoolId!
       }
-    });
-
-    if (!classRecord) {
-      return NextResponse.json(
-        { error: `No class found for grade ${grade}` },
-        { status: 400 }
-      );
-    }
+    })
 
     // Create attendance records
     const attendanceData = attendanceRecords.map((record: any) => ({
       studentId: record.studentId,
-      classId: classRecord.id,
+      classId: studentClassMap.get(record.studentId) || classRecord?.id || '',
       date: new Date(date),
       isPresent: record.status === 'PRESENT',
       schoolId: session.user.schoolId || "",
@@ -92,7 +91,7 @@ export async function POST(request: NextRequest) {
         })
         results.push(result)
       } catch (recordError) {
-        console.error('Error upserting attendance record:', record, recordError)
+        logger.error('Error upserting attendance record', recordError as Error, { record: String(record.studentId) })
         throw recordError
       }
     }
@@ -103,7 +102,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error recording grade-wise attendance:', error)
+    logger.error('Error recording grade-wise attendance', error as Error, { path: '/api/academic/attendance/grade-wise' })
     return NextResponse.json(
       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -131,7 +130,6 @@ export async function GET(request: NextRequest) {
 
     const skip = (page - 1) * limit
 
-    // Build where clause
     const where: any = {
       schoolId: session.user.schoolId
     }
@@ -159,47 +157,63 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get attendance records with pagination
     const [attendanceRecords, total] = await Promise.all([
       prisma.attendance.findMany({
         where,
         include: {
           student: {
-            select: { id: true, studentId: true, name: true, rollNumber: true, class: {
+            select: {
+              id: true,
+              studentId: true,
+              name: true,
+              rollNumber: true,
+              class: {
                 select: {
-                  classCode: true, sectionName: true }
+                  classCode: true,
+                  sectionName: true
+                }
               }
             }
           },
           marker: {
-            select: { name: true }
+            select: {
+              name: true
+            }
           }
         },
-        orderBy: {
-          createdAt: 'desc'
-        },
+        orderBy: { date: 'desc' },
         skip,
         take: limit
       }),
       prisma.attendance.count({ where })
     ])
 
-    const totalPages = Math.ceil(total / limit)
+    const presentCount = await prisma.attendance.count({
+      where: { ...where, isPresent: true }
+    })
+    const absentCount = total - presentCount
+    const attendancePercentage = total > 0 ? (presentCount / total) * 100 : 0
 
     return NextResponse.json({
       attendanceRecords,
+      summary: {
+        total,
+        present: presentCount,
+        absent: absentCount,
+        percentage: Math.round(attendancePercentage * 100) / 100
+      },
       pagination: {
         page,
         limit,
         total,
-        pages: totalPages
+        pages: Math.ceil(total / limit)
       }
     })
 
   } catch (error) {
-    console.error('Error fetching grade-wise attendance:', error)
+    logger.error('Get grade-wise attendance error', error as Error, { path: '/api/academic/attendance/grade-wise' })
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

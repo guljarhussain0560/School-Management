@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { createExamSchema } from '@/lib/validation';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -59,7 +61,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ exams });
 
   } catch (error) {
-    console.error('Error fetching exams:', error);
+    logger.error('Error fetching exams', error as Error, { path: '/api/academic/exams' });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -79,70 +81,63 @@ export async function POST(request: NextRequest) {
     }
 
     const schoolId = session.user.schoolId!;
-    const data = await request.json();
+    const body = await request.json();
+    const validation = createExamSchema.safeParse(body);
 
-    // Validate required fields
-    const requiredFields = ['examName', 'examType', 'subjectId', 'classId', 'totalMarks', 'passingMarks', 'duration'];
-    for (const field of requiredFields) {
-      if (!data[field]) {
-        return NextResponse.json(
-          { error: `${field} is required` },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Validate exam type
-    const validExamTypes = ['QUIZ', 'TEST', 'MID_TERM', 'FINAL', 'ASSIGNMENT', 'PROJECT', 'PRACTICAL', 'ORAL'];
-    if (!validExamTypes.includes(data.examType)) {
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Invalid exam type' },
+        { error: validation.error.errors[0]?.message || 'Invalid exam data', details: validation.error.errors },
         { status: 400 }
       );
     }
 
-    // Validate marks
-    if (data.passingMarks > data.totalMarks) {
+    const {
+      examName,
+      examType,
+      subjectId,
+      classId,
+      totalMarks,
+      passingMarks,
+      duration,
+      instructions
+    } = validation.data;
+
+    // Check passing marks validation
+    if (passingMarks > totalMarks) {
       return NextResponse.json(
         { error: 'Passing marks cannot be greater than total marks' },
         { status: 400 }
       );
     }
 
-    // Check if subject and class exist
-    const subject = await prisma.subject.findFirst({
-      where: { id: data.subjectId, schoolId }
+    // Check if exam already exists for the same class and subject
+    const existingExam = await prisma.exam.findUnique({
+      where: {
+        examName_subjectId_classId: {
+          examName,
+          subjectId,
+          classId
+        }
+      }
     });
 
-    if (!subject) {
+    if (existingExam) {
       return NextResponse.json(
-        { error: 'Subject not found' },
-        { status: 404 }
+        { error: 'An exam with this name already exists for the selected subject and class' },
+        { status: 400 }
       );
     }
 
-    const classExists = await prisma.class.findFirst({
-      where: { id: data.classId, schoolId }
-    });
-
-    if (!classExists) {
-      return NextResponse.json(
-        { error: 'Class not found' },
-        { status: 404 }
-      );
-    }
-
-    // Create exam
     const exam = await prisma.exam.create({
       data: {
-        examName: data.examName,
-        examType: data.examType,
-        subjectId: data.subjectId,
-        classId: data.classId,
-        totalMarks: data.totalMarks,
-        passingMarks: data.passingMarks,
-        duration: data.duration,
-        instructions: data.instructions,
+        examName,
+        examType: examType as any,
+        subjectId,
+        classId,
+        totalMarks,
+        passingMarks,
+        duration,
+        instructions: instructions || null,
         schoolId,
         createdBy: session.user.id
       },
@@ -156,10 +151,13 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    return NextResponse.json({ exam }, { status: 201 });
+    return NextResponse.json({
+      message: 'Exam created successfully',
+      exam
+    }, { status: 201 });
 
   } catch (error) {
-    console.error('Error creating exam:', error);
+    logger.error('Error creating exam', error as Error, { path: '/api/academic/exams' });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
