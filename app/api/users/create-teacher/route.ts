@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { hashPassword, generateTemporaryPassword, validateEmail } from '@/lib/utils'
+import { hashPassword, generateTemporaryPassword } from '@/lib/utils'
 import { sendEmail, generateCredentialsEmail } from '@/lib/email'
 import { UserRole } from '@prisma/client'
+import { createTeacherUserSchema } from '@/lib/validation'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,22 +20,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, email, subject, grade } = body
+    const validation = createTeacherUserSchema.partial({ password: true }).safeParse(body)
 
-    // Validation
-    if (!name || !email) {
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Name and email are required' },
+        { error: validation.error.errors[0]?.message || 'Invalid teacher data', details: validation.error.errors },
         { status: 400 }
       )
     }
 
-    if (!validateEmail(email)) {
-      return NextResponse.json(
-        { error: 'Invalid email format' },
-        { status: 400 }
-      )
-    }
+    const { name, email, phone } = validation.data
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -69,8 +65,7 @@ export async function POST(request: NextRequest) {
     )
 
     if (!emailResult.success) {
-      console.error('Failed to send credentials email:', emailResult.error)
-      // Don't fail the request, just log the error
+      logger.warn('Failed to send credentials email', { email, error: emailResult.error })
     }
 
     // Return teacher without password
@@ -83,7 +78,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error) {
-    console.error('Create teacher error:', error)
+    logger.error('Create teacher error', error as Error, { path: '/api/users/create-teacher' })
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

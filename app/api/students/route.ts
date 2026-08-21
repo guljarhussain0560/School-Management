@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { createStudentSchema } from '@/lib/validation';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -55,7 +57,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Get students error:', error);
+    logger.error('Get students error', error as Error, { path: '/api/students' });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -75,6 +77,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    const validation = createStudentSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: validation.error.errors[0]?.message || 'Invalid student data', details: validation.error.errors },
+        { status: 400 }
+      );
+    }
+
     const {
       name,
       email,
@@ -94,7 +105,7 @@ export async function POST(request: NextRequest) {
       medicalConditions,
       allergies,
       previousSchool
-    } = body;
+    } = validation.data;
 
     // Generate student ID
     const studentId = `STU${Date.now().toString().slice(-6)}`;
@@ -139,10 +150,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       message: 'Student created successfully',
       student
-    });
+    }, { status: 201 });
 
   } catch (error) {
-    console.error('Create student error:', error);
+    logger.error('Create student error', error as Error, { path: '/api/students' });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
