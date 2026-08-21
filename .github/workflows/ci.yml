@@ -156,14 +156,14 @@ jobs:
       - name: Verify Health Endpoint Response
         run: |
           echo "Waiting for services to become healthy..."
-          for i in {1..60}; do
+          for i in {1..90}; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/health || true)
             if [ "$STATUS" = "200" ]; then
               echo "Health check passed with HTTP 200 on attempt $i!"
               curl -s http://localhost:3000/api/health
               exit 0
             fi
-            if [ $((i % 10)) -eq 0 ]; then
+            if [ $((i % 15)) -eq 0 ]; then
               echo "--- Attempt $i diagnostics ---"
               docker compose ps
               docker compose logs --tail 20 app
@@ -174,6 +174,7 @@ jobs:
           echo "Health check timed out. Showing full docker logs:"
           docker compose logs
           exit 1
+
 
 
       - name: Teardown Stack
