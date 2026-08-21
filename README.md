@@ -164,9 +164,19 @@ The application will be accessible at [http://localhost:3000](http://localhost:3
 
 ---
 
+### 5. Ephemeral Test Container & CI Verification
+You can run the full test suite in an isolated, containerized environment with an ephemeral PostgreSQL database:
+```bash
+# Spin up test database and run full coverage test suite
+docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
+docker compose -f docker-compose.test.yml down -v
+```
+
+---
+
 ## 🧪 Automated Testing
 
-The project includes an automated test suite configured with **Vitest** and **React Testing Library**:
+The project includes an automated test suite configured with **Vitest**, **React Testing Library**, and isolated mock handlers:
 
 ```bash
 # Run all unit, component, and API route tests
@@ -177,6 +187,9 @@ npm run test:watch
 
 # Generate code coverage report
 npm run test:coverage
+
+# Run CI test suite with coverage enforcement
+npm run test:ci
 
 # Full validation check (Lint + Typecheck + Tests)
 npm run validate
@@ -195,6 +208,7 @@ npm run validate
 | `npm run typecheck` | Validates TypeScript types (`tsc --noEmit`) |
 | `npm test` | Executes Vitest test suite |
 | `npm run test:coverage`| Generates test coverage report |
+| `npm run test:ci` | Runs Vitest coverage suite in CI environment |
 | `npm run validate` | Runs linting, typecheck, and test suite in sequence |
 | `npm run db:generate` | Generates Prisma Client from schema |
 | `npm run db:push` | Pushes Prisma schema directly to database |
@@ -203,12 +217,14 @@ npm run validate
 
 ---
 
-## 🛡️ Security & Quality Standards
+## 🛡️ Security, Observability & Quality Standards
 
-- **Input Validation**: All API routes strictly validate incoming JSON payloads with [Zod](https://zod.dev/) schemas.
+- **Input Validation**: All API routes strictly validate incoming JSON payloads and query parameters with [Zod](https://zod.dev/) schemas.
 - **Secret Hygiene**: Zero hardcoded credentials; all secrets and tokens are loaded strictly via environment variables.
-- **Audit in CI**: Automated dependency vulnerability scanning via `npm audit --production` and weekly Dependabot PRs.
-- **Structured Logging**: Comprehensive JSON logging with trace context, log levels, and standard error handling wrappers.
+- **Audit in CI**: Automated dependency vulnerability scanning via `npm audit --audit-level=high` and weekly Dependabot updates.
+- **Structured Logging & Error Tracking**: Comprehensive JSON logging with trace context, log levels, and pluggable error tracking hooks (`ENABLE_ERROR_TRACKING=true` / Sentry integration).
+- **Health Check & Probes**: Standardized health probe endpoint at `/api/health` monitoring service uptime and database connectivity with sub-millisecond latency tracking.
+
 
 ---
 

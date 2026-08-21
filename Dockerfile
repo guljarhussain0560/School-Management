@@ -4,7 +4,7 @@
 
 # Stage 1: Base image with Node 20 Alpine
 FROM node:20-alpine AS base
-RUN apk add --no-cache libc6-compat openssl
+RUN apk add --no-cache libc6-compat openssl curl
 WORKDIR /app
 
 # Stage 2: Install dependencies
@@ -22,6 +22,10 @@ COPY . .
 # Generate Prisma Client & Build Next.js
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV NEXTAUTH_SECRET="ci-build-test-secret-key-32chars-minimum"
+ENV NEXTAUTH_URL="http://localhost:3000"
+ENV DATABASE_URL="postgresql://school_user:school_password@postgres:5432/school_management?schema=public"
+
 RUN npx prisma generate
 RUN npm run build
 
@@ -38,7 +42,7 @@ ENV HOSTNAME="0.0.0.0"
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy static assets and built standalone server
+# Copy static assets and built server
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
@@ -49,4 +53,4 @@ USER nextjs
 
 EXPOSE 3000
 
-CMD ["npm", "start"]
+CMD ["npm", "start", "--", "-p", "3000", "-H", "0.0.0.0"]

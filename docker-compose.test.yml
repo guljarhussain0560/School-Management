@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # Ephemeral PostgreSQL for automated isolated CI tests
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: school-management-postgres-test
+    restart: "no"
+    environment:
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_DB: test_school_management
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d test_school_management"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    networks:
+      - test-network
+
+  # Test Runner container
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: school-management-test-runner
+    environment:
+      - NODE_ENV=test
+      - DATABASE_URL=postgresql://test_user:test_password@postgres-test:5432/test_school_management?schema=public
+      - NEXTAUTH_SECRET=ci-test-secret-key-32chars-minimum-token
+      - NEXTAUTH_URL=http://localhost:3000
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    command: ["npm", "run", "test:coverage"]
+    networks:
+      - test-network
+
+networks:
+  test-network:
+    driver: bridge
